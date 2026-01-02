@@ -212,6 +212,16 @@ class Tooltip {
       addClass(tip, CLASSES.FADE);
     }
     
+    // CRITICAL: Hide tooltip during initial positioning to prevent visual shift
+    // Set initial styles to make tooltip invisible but measurable
+    tip.style.position = 'absolute';
+    tip.style.top = '0';
+    tip.style.left = '0';
+    tip.style.opacity = '0';
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    tip.style.pointerEvents = 'none';
+    
     // Get container and append tip
     const container = getContainer(this._options.container, this._element.ownerDocument.body);
     container.appendChild(tip);
@@ -219,16 +229,19 @@ class Tooltip {
     // Dispatch inserted event
     this._triggerEvent(EVENTS.INSERTED);
     
-    // Position the tooltip
+    // Position the tooltip WHILE INVISIBLE
     await this._updatePosition();
+    
+    // Now make visible - remove hiding styles and show
+    tip.style.visibility = '';
+    tip.style.pointerEvents = '';
     
     // Show with animation
     reflow(tip);
     addClass(tip, CLASSES.IN);
     
-    // Force visibility in case CSS isn't loaded or has specificity issues
+    // Force opacity for visibility
     tip.style.opacity = '1';
-    tip.style.display = 'block';
     
     if (this._options.animation) {
       await this._waitForTransition(tip, TRANSITION_DURATION);
