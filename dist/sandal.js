@@ -1223,17 +1223,34 @@
     
     /**
      * Trigger custom event
-     * @param {string} eventType 
-     * @param {Object} detail 
-     * @returns {CustomEvent}
+     * @param {string} eventType
+     * @param {Object} detail
+     * @returns {Event}
      * @private
      */
     _triggerEvent(eventType, detail = {}) {
-      const event = new CustomEvent(eventType, {
+      // Use jQuery/JQNext trigger if available - this ensures proper namespace handling
+      // and compatibility with jQuery event handlers (like those in preside.iframe.modal.js)
+      const $ = window.jQuery || window.presideJQuery;
+      
+      if ($ && $.fn && $.fn.trigger) {
+        // Use jQuery's trigger which properly handles namespaced events
+        const event = $.Event(eventType, detail);
+        $(this._element).trigger(event);
+        return event;
+      }
+      
+      // Fallback to native CustomEvent if jQuery is not available
+      // Parse event type and namespace (e.g., "hide.bs.modal" -> type: "hide", namespace: "bs.modal")
+      const parts = eventType.split('.');
+      const baseType = parts[0];
+      
+      const event = new CustomEvent(baseType, {
         bubbles: true,
         cancelable: eventType === EVENTS$8.SHOW || eventType === EVENTS$8.HIDE,
         detail
       });
+      
       this._element.dispatchEvent(event);
       return event;
     }
