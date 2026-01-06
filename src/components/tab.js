@@ -3,13 +3,18 @@
  * Modern vanilla JS implementation with Bootstrap 3 API compatibility
  */
 
+import $ from 'jqnext';
 import {
-  $, $$, closest, parent, children, siblings, hasClass, addClass, removeClass,
-  getAttr, setAttr,
-  trigger, on, off,
-  fadeIn, fadeOut, reflow,
   setInstance, getInstance, removeInstance
 } from '../utils/index.js';
+
+import {
+  $1 as $1Helper, $$, closest, parent, children, siblings,
+  hasClass, addClass, removeClass,
+  getAttr, setAttr,
+  trigger, on, off,
+  fadeIn, fadeOut, reflow
+} from './helpers.js';
 
 // Constants
 const NAME = 'tab';
@@ -54,7 +59,8 @@ class Tab {
    * @param {Element} element - The tab trigger element
    */
   constructor(element) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -106,7 +112,7 @@ class Tab {
       const activeChildren = children(listElement).filter(child => hasClass(child, CLASSES.ACTIVE));
       if (activeChildren.length > 0) {
         previous = activeChildren[0];
-        previousTab = $(SELECTORS.DATA_TOGGLE, previous) || previous;
+        previousTab = $1Helper(SELECTORS.DATA_TOGGLE, previous) || previous;
       } else {
         // Check for li > .active pattern
         const activeLi = listElement.querySelector(':scope > li > .active');
@@ -142,7 +148,7 @@ class Tab {
     this._activate(this._element, listElement, false);
     
     // Activate the pane
-    const target = targetSelector ? $(targetSelector) : null;
+    const target = targetSelector ? $1Helper(targetSelector) : null;
     if (target) {
       const container = target.parentElement;
       this._activate(target, container, true);
@@ -252,36 +258,30 @@ class Tab {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE,
-      detail
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
   }
   
   /**
    * Trigger event on specific element
-   * @param {Element} element 
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {Element} element
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEventOn(element, eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE,
-      detail
-    });
-    element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    $(element).trigger(event);
     return event;
   }
   

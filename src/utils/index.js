@@ -1,12 +1,17 @@
 /**
  * Sandal - Utility Modules
- * Modern vanilla JavaScript utilities
+ * Simplified to use JQNext for core functionality
  */
+
+import $ from 'jqnext';
 
 export * from './dom.js';
 export * from './events.js';
 export * from './animation.js';
 export * from './position.js';
+
+// Re-export JQNext
+export { $ };
 
 // Default exports as namespaces
 export { default as DOM } from './dom.js';
@@ -15,42 +20,32 @@ export { default as Animation } from './animation.js';
 export { default as Position } from './position.js';
 
 /**
- * Instance storage using WeakMap (modern alternative to $.data)
- */
-const instanceStorage = new WeakMap();
-
-/**
- * Store component instance on element
+ * Store component instance on element using JQNext's data system
  * @param {Element} element 
  * @param {string} key - Component key (e.g., 'bs.modal')
  * @param {Object} instance 
  */
 export function setInstance(element, key, instance) {
-  if (!instanceStorage.has(element)) {
-    instanceStorage.set(element, new Map());
-  }
-  instanceStorage.get(element).set(key, instance);
+  $(element).data(key, instance);
 }
 
 /**
- * Get component instance from element
+ * Get component instance from element using JQNext's data system
  * @param {Element} element 
  * @param {string} key 
  * @returns {Object|null}
  */
 export function getInstance(element, key) {
-  if (!instanceStorage.has(element)) return null;
-  return instanceStorage.get(element).get(key) || null;
+  return $(element).data(key) || null;
 }
 
 /**
- * Remove component instance from element
+ * Remove component instance from element using JQNext's data system
  * @param {Element} element 
  * @param {string} key 
  */
 export function removeInstance(element, key) {
-  if (!instanceStorage.has(element)) return;
-  instanceStorage.get(element).delete(key);
+  $(element).removeData(key);
 }
 
 /**
@@ -106,68 +101,6 @@ export function parseDataOptions(element, defaults = {}, prefix = '') {
   });
   
   return options;
-}
-
-/**
- * Execute callback when element is added to DOM
- * @param {Element} element 
- * @param {Function} callback 
- */
-export function onElementInserted(element, callback) {
-  if (document.body.contains(element)) {
-    callback();
-    return;
-  }
-  
-  const observer = new MutationObserver((mutations, obs) => {
-    if (document.body.contains(element)) {
-      obs.disconnect();
-      callback();
-    }
-  });
-  
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-}
-
-/**
- * Execute callback when element is removed from DOM
- * @param {Element} element 
- * @param {Function} callback 
- * @returns {Function} - Disconnect function
- */
-export function onElementRemoved(element, callback) {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const removedNode of mutation.removedNodes) {
-        if (removedNode === element || removedNode.contains(element)) {
-          observer.disconnect();
-          callback();
-          return;
-        }
-      }
-    }
-  });
-  
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  return () => observer.disconnect();
-}
-
-/**
- * Sanitize HTML string (basic XSS prevention)
- * @param {string} html 
- * @returns {string}
- */
-export function sanitizeHTML(html) {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
 }
 
 /**

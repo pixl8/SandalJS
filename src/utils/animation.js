@@ -1,7 +1,13 @@
 /**
- * Sandal - Modern Animation Utilities
- * Web Animation API based helpers
+ * Sandal - Advanced Animation Utilities
+ * Uses Web Animation API for animations not covered by JQNext
+ * JQNext provides: fadeIn, fadeOut, slideDown, slideUp, slideToggle, animate
  */
+
+import $ from 'jqnext';
+
+// Re-export JQNext for convenience
+export { $ };
 
 /**
  * Default animation options
@@ -44,102 +50,6 @@ export function animate(element, keyframes, options = {}) {
     animation.onfinish = () => resolve(animation);
     animation.oncancel = () => reject(new Error('Animation cancelled'));
   });
-}
-
-/**
- * Fade in element
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-export function fadeIn(element, options = {}) {
-  element.style.display = '';
-  if (getComputedStyle(element).display === 'none') {
-    element.style.display = 'block';
-  }
-  
-  return animate(element, [
-    { opacity: 0 },
-    { opacity: 1 }
-  ], { duration: 150, ...options });
-}
-
-/**
- * Fade out element
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-export async function fadeOut(element, options = {}) {
-  await animate(element, [
-    { opacity: 1 },
-    { opacity: 0 }
-  ], { duration: 150, ...options });
-  
-  element.style.display = 'none';
-  element.style.opacity = '';
-}
-
-/**
- * Slide down (expand) element
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-export async function slideDown(element, options = {}) {
-  // Get natural height
-  element.style.display = '';
-  element.style.overflow = 'hidden';
-  element.style.height = 'auto';
-  const naturalHeight = element.offsetHeight;
-  element.style.height = '0px';
-  
-  // Force reflow
-  element.offsetHeight;
-  
-  const animation = await animate(element, [
-    { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' },
-    { height: `${naturalHeight}px`, paddingTop: '', paddingBottom: '', marginTop: '', marginBottom: '' }
-  ], { duration: 350, easing: Easing.easeOutCubic, ...options });
-  
-  // Clean up
-  element.style.height = '';
-  element.style.overflow = '';
-  
-  return animation;
-}
-
-/**
- * Slide up (collapse) element
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-export async function slideUp(element, options = {}) {
-  element.style.overflow = 'hidden';
-  const currentHeight = element.offsetHeight;
-  
-  const animation = await animate(element, [
-    { height: `${currentHeight}px`, paddingTop: '', paddingBottom: '', marginTop: '', marginBottom: '' },
-    { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' }
-  ], { duration: 350, easing: Easing.easeOutCubic, ...options });
-  
-  element.style.display = 'none';
-  element.style.height = '';
-  element.style.overflow = '';
-  
-  return animation;
-}
-
-/**
- * Slide toggle
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-export function slideToggle(element, options = {}) {
-  const isHidden = getComputedStyle(element).display === 'none';
-  return isHidden ? slideDown(element, options) : slideUp(element, options);
 }
 
 /**
@@ -315,12 +225,8 @@ export function carouselSlideIn(element, direction, options = {}) {
 }
 
 export default {
+  $,
   animate,
-  fadeIn,
-  fadeOut,
-  slideDown,
-  slideUp,
-  slideToggle,
   scaleIn,
   scaleOut,
   slideIn,

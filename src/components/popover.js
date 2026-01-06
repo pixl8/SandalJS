@@ -4,13 +4,17 @@
  * Extends Tooltip functionality
  */
 
+import $ from 'jqnext';
 import {
-  $, hasClass, addClass, removeClass,
-  getAttr, setAttr, removeAttr,
   createFromHTML,
   setInstance, getInstance, removeInstance,
-  parseDataOptions, getUID, sanitizeHTML
+  parseDataOptions, getUID
 } from '../utils/index.js';
+
+import {
+  $1 as $1Helper, hasClass, addClass, removeClass,
+  getAttr, setAttr, removeAttr, sanitizeHTML
+} from './helpers.js';
 
 import Tooltip from './tooltip.js';
 
@@ -66,6 +70,9 @@ class Popover extends Tooltip {
     super(element, options);
     
     if (!this._element) return;
+    
+    // Store jQuery reference
+    this.$element = $(this._element);
     
     // Re-store with popover data key
     removeInstance(this._element, Tooltip.DATA_KEY);
@@ -180,8 +187,8 @@ class Popover extends Tooltip {
    * @private
    */
   _setContent(tip, title) {
-    const titleEl = $(SELECTORS.TITLE, tip);
-    const contentEl = $(SELECTORS.CONTENT, tip);
+    const titleEl = $1Helper(SELECTORS.TITLE, tip);
+    const contentEl = $1Helper(SELECTORS.CONTENT, tip);
     
     // Set title
     if (titleEl) {
@@ -239,19 +246,17 @@ class Popover extends Tooltip {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
     // Map tooltip events to popover events
     const popoverEventType = eventType.replace('.bs.tooltip', EVENT_KEY);
     
-    const event = new CustomEvent(popoverEventType, {
-      bubbles: true,
-      cancelable: popoverEventType === EVENTS.SHOW || popoverEventType === EVENTS.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(popoverEventType);
+    this.$element.trigger(event);
     return event;
   }
   

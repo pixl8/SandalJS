@@ -4,11 +4,13 @@
  */
 
 import {
-  $, $$, closest, hasClass, addClass, removeClass, toggleClass,
-  getAttr, setAttr, removeAttr,
-  trigger,
   setInstance, getInstance, removeInstance
 } from '../utils/index.js';
+
+import {
+  $1 as $, $$, closest, hasClass, addClass, removeClass, toggleClass,
+  getAttr, setAttr, removeAttr, trigger
+} from './helpers.js';
 
 // Constants
 const NAME = 'button';

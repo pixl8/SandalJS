@@ -6,12 +6,14 @@
  */
 
 import {
-  $, hasClass, addClass, removeClass,
-  getAttr, css,
-  on, off, trigger,
   setInstance, getInstance, removeInstance,
   parseDataOptions
 } from '../utils/index.js';
+
+import {
+  $1 as $, $$, hasClass, addClass, removeClass,
+  getAttr, css, on, off, trigger
+} from './helpers.js';
 
 // Constants
 const NAME = 'affix';

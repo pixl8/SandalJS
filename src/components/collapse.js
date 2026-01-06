@@ -4,14 +4,16 @@
  * Uses Web Animation API for smooth animations
  */
 
+import $ from 'jqnext';
 import {
-  $, $$, closest, hasClass, addClass, removeClass,
-  getAttr, setAttr, data as getData,
-  trigger,
-  slideDown, slideUp, reflow,
   setInstance, getInstance, removeInstance,
   parseDataOptions
 } from '../utils/index.js';
+
+import {
+  $1 as $1Helper, $$, closest, hasClass, addClass, removeClass,
+  getAttr, setAttr, data as getData, trigger, reflow
+} from './helpers.js';
 
 // Constants
 const NAME = 'collapse';
@@ -54,7 +56,8 @@ class Collapse {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -292,7 +295,7 @@ class Collapse {
     if (typeof parent === 'string') {
       // Check if it's an ID selector
       if (parent.charAt(0) === '#') {
-        return $(parent);
+        return $1Helper(parent);
       }
       // Try to find parent from element's context
       return closest(this._element, parent);
@@ -340,16 +343,14 @@ class Collapse {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType);
+    this.$element.trigger(event);
     return event;
   }
   

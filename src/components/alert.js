@@ -3,12 +3,16 @@
  * Modern vanilla JS implementation with Bootstrap 3 API compatibility
  */
 
-import { 
-  $, closest, hasClass, removeClass, remove as removeElement,
-  trigger, on, off,
-  fadeOut,
+import {
   setInstance, getInstance, removeInstance
 } from '../utils/index.js';
+
+import $J from 'jqnext';
+
+import {
+  $1 as $, closest, hasClass, removeClass,
+  remove as removeElement, trigger, on, off, fadeOut
+} from './helpers.js';
 
 // Constants
 const NAME = 'alert';
@@ -119,30 +123,29 @@ class Alert {
       await fadeOut(element, { duration: 150 });
     }
     
-    // Dispatch closed event
-    this._triggerEvent(EVENTS.CLOSED, element);
-    
-    // Remove from DOM and clean up
+    // Remove from DOM and clean up BEFORE triggering closed event
     const instance = getInstance(element, DATA_KEY);
     if (instance) {
       instance.dispose();
     }
     removeElement(element);
+    
+    // Dispatch closed event AFTER removal
+    this._triggerEvent(EVENTS.CLOSED, element);
   }
   
   /**
-   * Trigger custom event
-   * @param {string} eventType 
-   * @param {Element} element 
-   * @returns {CustomEvent}
+   * Trigger jQuery event
+   * @param {string} eventType
+   * @param {Element} element
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, element) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
+    const event = $J.Event(eventType, {
       cancelable: eventType === EVENTS.CLOSE
     });
-    element.dispatchEvent(event);
+    $J(element).trigger(event);
     return event;
   }
   

@@ -5,12 +5,14 @@
  */
 
 import {
-  $, $$, closest, hasClass, addClass, removeClass,
-  getAttr, setAttr, parent,
-  on, off, trigger,
   setInstance, getInstance, removeInstance,
   parseDataOptions
 } from '../utils/index.js';
+
+import {
+  $1 as $, $$, closest, hasClass, addClass, removeClass,
+  getAttr, setAttr, parent, on, off, trigger
+} from './helpers.js';
 
 // Constants
 const NAME = 'scrollspy';

@@ -1,140 +1,13 @@
 /**
- * Sandal - Modern Event Utilities
- * Vanilla JavaScript helpers for event handling
+ * Sandal - Event Utilities
+ * Simplified to use JQNext for core event handling
+ * Keeps only unique utilities not provided by JQNext
  */
 
-// WeakMap to store event handlers for cleanup
-const handlerStorage = new WeakMap();
+import $ from 'jqnext';
 
-/**
- * Add event listener
- * @param {Element|Window|Document} element 
- * @param {string} eventType - Event type(s), space-separated for multiple
- * @param {Function|string} handler - Handler function or selector for delegation
- * @param {Function} [delegatedHandler] - Handler when using delegation
- * @param {Object} [options] - addEventListener options
- */
-export function on(element, eventType, handler, delegatedHandler, options = {}) {
-  const events = eventType.split(' ').filter(Boolean);
-  
-  events.forEach(event => {
-    let actualHandler;
-    let selector = null;
-    
-    // Check if using event delegation
-    if (typeof handler === 'string') {
-      selector = handler;
-      actualHandler = (e) => {
-        const target = e.target.closest(selector);
-        if (target && element.contains(target)) {
-          delegatedHandler.call(target, e, target);
-        }
-      };
-    } else {
-      actualHandler = handler;
-    }
-    
-    element.addEventListener(event, actualHandler, options);
-    
-    // Store for potential removal
-    if (!handlerStorage.has(element)) {
-      handlerStorage.set(element, new Map());
-    }
-    const elementHandlers = handlerStorage.get(element);
-    const key = `${event}${selector || ''}`;
-    if (!elementHandlers.has(key)) {
-      elementHandlers.set(key, []);
-    }
-    elementHandlers.get(key).push({
-      original: handler,
-      actual: actualHandler,
-      selector,
-      options
-    });
-  });
-}
-
-/**
- * Remove event listener
- * @param {Element|Window|Document} element 
- * @param {string} eventType - Event type(s), space-separated
- * @param {Function|string} [handler] - Original handler or selector
- */
-export function off(element, eventType, handler) {
-  const events = eventType.split(' ').filter(Boolean);
-  const elementHandlers = handlerStorage.get(element);
-  
-  if (!elementHandlers) return;
-  
-  events.forEach(event => {
-    if (!handler) {
-      // Remove all handlers for this event
-      elementHandlers.forEach((handlers, key) => {
-        if (key.startsWith(event)) {
-          handlers.forEach(h => {
-            element.removeEventListener(event, h.actual, h.options);
-          });
-          elementHandlers.delete(key);
-        }
-      });
-    } else {
-      const selector = typeof handler === 'string' ? handler : '';
-      const key = `${event}${selector}`;
-      const handlers = elementHandlers.get(key);
-      
-      if (handlers) {
-        const idx = handlers.findIndex(h => 
-          typeof handler === 'string' 
-            ? h.selector === handler 
-            : h.original === handler
-        );
-        if (idx !== -1) {
-          element.removeEventListener(event, handlers[idx].actual, handlers[idx].options);
-          handlers.splice(idx, 1);
-        }
-      }
-    }
-  });
-}
-
-/**
- * Add one-time event listener
- * @param {Element} element 
- * @param {string} eventType 
- * @param {Function} handler 
- */
-export function once(element, eventType, handler) {
-  on(element, eventType, handler, null, { once: true });
-}
-
-/**
- * Trigger custom event
- * @param {Element} element 
- * @param {string} eventType 
- * @param {Object} [detail] - Event detail data
- * @param {Object} [options] - Event options
- * @returns {boolean} - Whether event was not cancelled
- */
-export function trigger(element, eventType, detail = {}, options = {}) {
-  const event = new CustomEvent(eventType, {
-    bubbles: options.bubbles !== false,
-    cancelable: options.cancelable !== false,
-    detail
-  });
-  return element.dispatchEvent(event);
-}
-
-/**
- * Delegate event handler to parent
- * @param {Element} parent 
- * @param {string} eventType 
- * @param {string} selector 
- * @param {Function} handler 
- * @param {Object} [options]
- */
-export function delegate(parent, eventType, selector, handler, options = {}) {
-  on(parent, eventType, selector, handler, options);
-}
+// Re-export JQNext for convenience
+export { $ };
 
 /**
  * Wait for transition end
@@ -237,34 +110,6 @@ export function throttle(func, limit) {
 }
 
 /**
- * Get event path (for older browsers)
- * @param {Event} event 
- * @returns {Element[]}
- */
-export function getEventPath(event) {
-  if (event.composedPath) {
-    return event.composedPath();
-  }
-  
-  const path = [];
-  let target = event.target;
-  while (target) {
-    path.push(target);
-    target = target.parentNode;
-  }
-  return path;
-}
-
-/**
- * Prevent default and stop propagation
- * @param {Event} event 
- */
-export function stop(event) {
-  event.preventDefault();
-  event.stopPropagation();
-}
-
-/**
  * Check if key event matches key
  * @param {KeyboardEvent} event 
  * @param {string} key - Key name (e.g., 'Escape', 'Enter', 'ArrowDown')
@@ -290,33 +135,12 @@ export const Keys = {
   ARROW_DOWN: 'ArrowDown'
 };
 
-/**
- * Wait for DOM ready
- * @returns {Promise<void>}
- */
-export function ready() {
-  return new Promise(resolve => {
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      resolve();
-    } else {
-      document.addEventListener('DOMContentLoaded', resolve, { once: true });
-    }
-  });
-}
-
 export default {
-  on,
-  off,
-  once,
-  trigger,
-  delegate,
+  $,
   onTransitionEnd,
   onAnimationEnd,
   debounce,
   throttle,
-  getEventPath,
-  stop,
   isKey,
-  Keys,
-  ready
+  Keys
 };

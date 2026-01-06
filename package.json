@@ -36,14 +36,13 @@
     "eslint": "^8.0.0",
     "jest": "^29.0.0"
   },
+  "dependencies": {
+    "jqnext": "file:../jqnext"
+  },
   "peerDependencies": {
-    "jquery": ">=1.9.0",
     "@floating-ui/dom": ">=1.0.0"
   },
   "peerDependenciesMeta": {
-    "jquery": {
-      "optional": true
-    },
     "@floating-ui/dom": {
       "optional": true
     }

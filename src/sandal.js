@@ -1,3 +1,4 @@
+import $ from 'jqnext';
 import Modal from './components/modal.js';
 import Dropdown from './components/dropdown.js';
 import Tooltip from './components/tooltip.js';
@@ -15,8 +16,10 @@ import Affix from './components/affix.js';
  * @class
  */
 class Sandal {
+  static VERSION = '1.3.0';
+  
   constructor() {
-    this.version = '1.0.0';
+    this.version = '1.3.0';
     this._components = new Map();
   }
 
@@ -179,21 +182,11 @@ class Sandal {
   }
 }
 
-// jQuery/presideJQuery compatibility layer
-// Preside uses presideJQuery instead of jQuery
+// jQuery/presideJQuery compatibility layer using JQNext
+// JQNext provides full jQuery 2.x compatibility and sets window.presideJQuery
 (function() {
-  // Get the jQuery reference - check for presideJQuery first (Preside), then jQuery
-  const $ = (typeof window !== 'undefined' && window.presideJQuery) ||
-            (typeof window !== 'undefined' && window.jQuery) ||
-            (typeof jQuery !== 'undefined' && jQuery);
-  
-  if (!$) {
-    // No jQuery available, skip plugin registration
-    if (typeof window !== 'undefined') {
-      window.Sandal = Sandal;
-    }
-    return;
-  }
+  // JQNext is already imported and sets window.jQuery, window.$, and window.presideJQuery
+  // We use the imported $ which is JQNext
 
   // Add transition support detection (Bootstrap 3 requirement)
   function transitionEnd() {
@@ -247,12 +240,17 @@ class Sandal {
   $.fn.modal = function(option, _relatedTarget) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.modal');
+      let data = Modal.getInstance(this);
       const options = $.extend({}, Modal.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
 
-      if (!data) $this.data('bs.modal', (data = new Modal(this, options)));
-      if (typeof option === 'string') data[option](_relatedTarget);
-      else if (options.show) data.show(_relatedTarget);
+      if (!data && option !== 'dispose') {
+        data = new Modal(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option](_relatedTarget);
+      } else if (data && options.show) {
+        data.show(_relatedTarget);
+      }
     });
   };
   $.fn.modal.Constructor = Modal;
@@ -262,10 +260,14 @@ class Sandal {
   $.fn.dropdown = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.dropdown');
+      let data = Dropdown.getInstance(this);
 
-      if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Dropdown(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.dropdown.Constructor = Dropdown;
@@ -275,11 +277,15 @@ class Sandal {
   $.fn.tooltip = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.tooltip');
+      let data = Tooltip.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.tooltip', (data = new Tooltip(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Tooltip(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.tooltip.Constructor = Tooltip;
@@ -289,13 +295,13 @@ class Sandal {
   $.fn.popover = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.popover');
+      let data = Popover.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) {
-        $this.data('bs.popover', (data = new Popover(this, options)));
+      if (!data && option !== 'dispose') {
+        data = new Popover(this, options);
       }
-      if (typeof option === 'string') {
+      if (typeof option === 'string' && data) {
         data[option]();
       }
     });
@@ -307,10 +313,14 @@ class Sandal {
   $.fn.tab = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.tab');
+      let data = Tab.getInstance(this);
 
-      if (!data) $this.data('bs.tab', (data = new Tab(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Tab(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.tab.Constructor = Tab;
@@ -320,11 +330,15 @@ class Sandal {
   $.fn.collapse = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.collapse');
+      let data = Collapse.getInstance(this);
       const options = $.extend({}, Collapse.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
 
-      if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Collapse(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.collapse.Constructor = Collapse;
@@ -334,10 +348,14 @@ class Sandal {
   $.fn.alert = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.alert');
+      let data = Alert.getInstance(this);
 
-      if (!data) $this.data('bs.alert', (data = new Alert(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Alert(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.alert.Constructor = Alert;
@@ -347,12 +365,17 @@ class Sandal {
   $.fn.button = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.button');
+      let data = Button.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.button', (data = new Button(this, options)));
-      if (option === 'toggle') data.toggle();
-      else if (option) data.setState(option);
+      if (!data && option !== 'dispose') {
+        data = new Button(this, options);
+      }
+      if (option === 'toggle' && data) {
+        data.toggle();
+      } else if (option && data) {
+        data.setState(option);
+      }
     });
   };
   $.fn.button.Constructor = Button;
@@ -362,14 +385,20 @@ class Sandal {
   $.fn.carousel = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.carousel');
+      let data = Carousel.getInstance(this);
       const options = $.extend({}, Carousel.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
       const action = typeof option === 'string' ? option : options.slide;
 
-      if (!data) $this.data('bs.carousel', (data = new Carousel(this, options)));
-      if (typeof option === 'number') data.to(option);
-      else if (action) data[action]();
-      else if (options.interval) data.pause().cycle();
+      if (!data && option !== 'dispose') {
+        data = new Carousel(this, options);
+      }
+      if (typeof option === 'number' && data) {
+        data.to(option);
+      } else if (action && data) {
+        data[action]();
+      } else if (data && options.interval) {
+        data.pause().cycle();
+      }
     });
   };
   $.fn.carousel.Constructor = Carousel;
@@ -379,11 +408,15 @@ class Sandal {
   $.fn.scrollspy = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.scrollspy');
+      let data = Scrollspy.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.scrollspy', (data = new Scrollspy(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Scrollspy(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.scrollspy.Constructor = Scrollspy;
@@ -393,11 +426,15 @@ class Sandal {
   $.fn.affix = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.affix');
+      let data = Affix.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.affix', (data = new Affix(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Affix(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.affix.Constructor = Affix;
@@ -407,14 +444,14 @@ class Sandal {
   // DATA-API (automatic initialization via data attributes)
   // ===========================================
 
-  // Tab data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.tab.data-api', '.presidecms [data-toggle$="tab"], .presidecms [data-toggle$="pill"]', function(e) {
+  // Tab data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.tab.data-api', '[data-toggle$="tab"], [data-toggle$="pill"]', function(e) {
     e.preventDefault();
     $(this).tab('show');
   });
 
-  // Modal data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.modal.data-api', '.presidecms [data-toggle$="modal"]', function(e) {
+  // Modal data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.modal.data-api', '[data-toggle$="modal"]', function(e) {
     const $this = $(this);
     const href = $this.attr('href');
     const $target = $($this.attr('data-target') || (href && href.replace(/.*(?=#[^\s]+$)/, '')));
@@ -425,15 +462,15 @@ class Sandal {
     $target.modal(option, this);
   });
 
-  // Dropdown data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.dropdown.data-api', '.presidecms [data-toggle$=dropdown]', function(e) {
+  // Dropdown data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.dropdown.data-api', '[data-toggle$=dropdown]', function(e) {
     e.preventDefault();
     e.stopPropagation();
     $(this).dropdown('toggle');
   });
 
-  // Collapse data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.collapse.data-api', '.presidecms [data-toggle$=collapse]', function(e) {
+  // Collapse data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.collapse.data-api', '[data-toggle$=collapse]', function(e) {
     const $this = $(this);
     let href;
     const target = $this.attr('data-target')
@@ -446,14 +483,14 @@ class Sandal {
     $target.collapse(option);
   });
 
-  // Alert data-api (Preside uses .presidecms namespace)
-  $(document).on('click.bs.alert.data-api', '.presidecms [data-dismiss="alert"]', function(e) {
+  // Alert data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.alert.data-api', '[data-dismiss="alert"]', function(e) {
     $(this).closest('.alert').alert('close');
     e.preventDefault();
   });
 
-  // Button data-api (Preside uses .presidecms namespace)
-  $(document).on('click.bs.button.data-api', '.presidecms [data-toggle^=button]', function(e) {
+  // Button data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.button.data-api', '[data-toggle^=button]', function(e) {
     let $btn = $(e.target);
     if (!$btn.hasClass('btn')) $btn = $btn.closest('.btn');
     $btn.button('toggle');

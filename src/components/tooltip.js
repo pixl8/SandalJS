@@ -4,17 +4,20 @@
  * Uses modern positioning (Floating UI compatible)
  */
 
+import $ from 'jqnext';
 import {
-  $, $$, closest, hasClass, addClass, removeClass,
-  getAttr, setAttr, removeAttr, data as getData, css,
-  show as showEl, hide as hideEl, remove as removeEl,
-  createFromHTML, dimensions, offset,
-  on, off, trigger,
-  fadeIn, fadeOut, reflow,
+  createFromHTML,
   computePosition, applyPosition, autoUpdate, getContainer,
   setInstance, getInstance, removeInstance,
-  parseDataOptions, getUID, sanitizeHTML
+  parseDataOptions, getUID
 } from '../utils/index.js';
+import {
+  $$, closest, hasClass, addClass, removeClass,
+  getAttr, setAttr, removeAttr, getData, css,
+  show as showEl, hide as hideEl, remove as removeEl,
+  dimensions, offset, on, off, trigger, sanitizeHTML,
+  fadeIn, fadeOut, reflow
+} from './helpers.js';
 
 // Constants
 const NAME = 'tooltip';
@@ -81,7 +84,8 @@ class Tooltip {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -327,6 +331,13 @@ class Tooltip {
     this._element = null;
     this._options = null;
     this._tip = null;
+  }
+  
+  /**
+   * Destroy tooltip instance (Bootstrap 3 alias for dispose)
+   */
+  destroy() {
+    this.dispose();
   }
   
   // Private methods
@@ -578,16 +589,15 @@ class Tooltip {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    // and compatibility with jQuery event handlers
+    const event = $.Event(eventType);
+    this.$element.trigger(event);
     return event;
   }
   

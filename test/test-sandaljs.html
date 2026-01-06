@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SandalJS Component Tests</title>
+    <link rel="stylesheet" href="./lib/qunit/qunit.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./lib/sandal.css">
+    <style>
+        /* Test-specific styles */
+        .test-container {
+            padding: 20px;
+            margin: 20px 0;
+        }
+        #qunit-fixture {
+            position: static !important;
+            height: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="qunit"></div>
+    <div id="qunit-fixture">
+        <!-- Modal Test -->
+        <div class="modal fade" id="test-modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title">Test Modal</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Modal content</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dropdown Test -->
+        <div class="dropdown" id="test-dropdown">
+            <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                Dropdown <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a href="#">Action</a></li>
+                <li><a href="#">Another action</a></li>
+                <li class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+            </ul>
+        </div>
+
+        <!-- Tooltip Test -->
+        <button type="button" id="test-tooltip" class="btn btn-default" 
+                data-toggle="tooltip" data-placement="top" title="Tooltip text">
+            Hover me
+        </button>
+
+        <!-- Popover Test -->
+        <button type="button" id="test-popover" class="btn btn-default" 
+                data-toggle="popover" title="Popover title" 
+                data-content="Popover content text">
+            Click me
+        </button>
+
+        <!-- Tab Test -->
+        <ul class="nav nav-tabs" id="test-tabs">
+            <li class="active"><a href="#tab1" data-toggle="tab">Tab 1</a></li>
+            <li><a href="#tab2" data-toggle="tab">Tab 2</a></li>
+            <li><a href="#tab3" data-toggle="tab">Tab 3</a></li>
+        </ul>
+        <div class="tab-content">
+            <div id="tab1" class="tab-pane fade in active">Tab 1 content</div>
+            <div id="tab2" class="tab-pane fade">Tab 2 content</div>
+            <div id="tab3" class="tab-pane fade">Tab 3 content</div>
+        </div>
+
+        <!-- Collapse Test -->
+        <button class="btn btn-primary" data-toggle="collapse" data-target="#test-collapse">
+            Toggle collapse
+        </button>
+        <div id="test-collapse" class="collapse">
+            <div class="well">Collapsed content</div>
+        </div>
+
+        <!-- Alert Test -->
+        <div class="alert alert-warning alert-dismissible" id="test-alert" role="alert">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <strong>Warning!</strong> This is a test alert.
+        </div>
+
+        <!-- Button Test -->
+        <button type="button" id="test-button" class="btn btn-primary" 
+                data-loading-text="Loading...">
+            Loading state
+        </button>
+        <button type="button" id="test-toggle-button" class="btn btn-primary" 
+                data-toggle="button">
+            Single toggle
+        </button>
+
+        <!-- Carousel Test -->
+        <div id="test-carousel" class="carousel slide" data-ride="carousel">
+            <ol class="carousel-indicators">
+                <li data-target="#test-carousel" data-slide-to="0" class="active"></li>
+                <li data-target="#test-carousel" data-slide-to="1"></li>
+                <li data-target="#test-carousel" data-slide-to="2"></li>
+            </ol>
+            <div class="carousel-inner">
+                <div class="item active">
+                    <div style="background: #777; height: 200px; color: white; line-height: 200px; text-align: center;">Slide 1</div>
+                </div>
+                <div class="item">
+                    <div style="background: #888; height: 200px; color: white; line-height: 200px; text-align: center;">Slide 2</div>
+                </div>
+                <div class="item">
+                    <div style="background: #999; height: 200px; color: white; line-height: 200px; text-align: center;">Slide 3</div>
+                </div>
+            </div>
+            <a class="left carousel-control" href="#test-carousel" data-slide="prev">
+                <span class="glyphicon glyphicon-chevron-left"></span>
+            </a>
+            <a class="right carousel-control" href="#test-carousel" data-slide="next">
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>
+        </div>
+
+        <!-- ScrollSpy Test -->
+        <nav id="test-scrollspy-nav" class="navbar navbar-default">
+            <ul class="nav navbar-nav">
+                <li><a href="#section1">Section 1</a></li>
+                <li><a href="#section2">Section 2</a></li>
+                <li><a href="#section3">Section 3</a></li>
+            </ul>
+        </nav>
+        <div data-spy="scroll" data-target="#test-scrollspy-nav" id="test-scrollspy-container" 
+             style="height: 200px; overflow-y: scroll; position: relative;">
+            <div id="section1" style="height: 200px;">Section 1</div>
+            <div id="section2" style="height: 200px;">Section 2</div>
+            <div id="section3" style="height: 200px;">Section 3</div>
+        </div>
+
+        <!-- Affix Test -->
+        <div id="test-affix" data-spy="affix" data-offset-top="200">
+            Affixed element
+        </div>
+    </div>
+
+    <script src="./lib/qunit/qunit.js"></script>
+    <script src="./lib/jqnext.js"></script>
+    <script src="./lib/sandal.js"></script>
+    <script src="./tests.js"></script>
+</body>
+</html>

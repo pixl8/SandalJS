@@ -1,141 +1,11 @@
-/**
- * Sandal - Modern DOM Utilities
- * Vanilla JavaScript helpers for DOM manipulation
- */
+import $ from 'jqnext';
 
 /**
- * Query single element
- * @param {string|Element} selector - CSS selector or element
- * @param {Element|Document} context - Context to search within
- * @returns {Element|null}
+ * Sandal - DOM Utilities
+ * Simplified to use JQNext for core DOM operations
+ * Keeps only unique utilities not provided by JQNext
  */
-function $(selector, context = document) {
-  if (selector instanceof Element) return selector;
-  if (typeof selector === 'string') {
-    return context.querySelector(selector);
-  }
-  return null;
-}
 
-/**
- * Query multiple elements
- * @param {string} selector - CSS selector
- * @param {Element|Document} context - Context to search within
- * @returns {Element[]}
- */
-function $$$1(selector, context = document) {
-  return Array.from(context.querySelectorAll(selector));
-}
-
-/**
- * Find closest ancestor matching selector
- * @param {Element} element
- * @param {string} selector
- * @returns {Element|null}
- */
-function closest(element, selector) {
-  if (!element || !element.closest) return null;
-  return element.closest(selector);
-}
-
-/**
- * Get children of element
- * @param {Element} element
- * @param {string} [selector] - Optional selector to filter
- * @returns {Element[]}
- */
-function children(element, selector) {
-  if (!element || !element.children) return [];
-  const kids = Array.from(element.children);
-  if (!selector) return kids;
-  return kids.filter(child => child.matches && child.matches(selector));
-}
-
-/**
- * Add class(es) to element
- * @param {Element} element
- * @param {...string} classes
- */
-function addClass(element, ...classes) {
-  if (!element || !element.classList) return;
-  element.classList.add(...classes.flatMap(c => c.split(' ').filter(Boolean)));
-}
-
-/**
- * Remove class(es) from element
- * @param {Element} element
- * @param {...string} classes
- */
-function removeClass(element, ...classes) {
-  if (!element || !element.classList) return;
-  element.classList.remove(...classes.flatMap(c => c.split(' ').filter(Boolean)));
-}
-
-/**
- * Toggle class on element
- * @param {Element} element
- * @param {string} className
- * @param {boolean} [force] - Force add or remove
- * @returns {boolean}
- */
-function toggleClass(element, className, force) {
-  if (!element || !element.classList) return false;
-  return element.classList.toggle(className, force);
-}
-
-/**
- * Check if element has class
- * @param {Element} element
- * @param {string} className
- * @returns {boolean}
- */
-function hasClass(element, className) {
-  if (!element || !element.classList) return false;
-  return element.classList.contains(className);
-}
-
-/**
- * Set attribute(s) on element
- * @param {Element} element 
- * @param {string|Object} name - Attribute name or object of attributes
- * @param {string} [value] - Attribute value
- */
-function setAttr(element, name, value) {
-  if (typeof name === 'object') {
-    Object.entries(name).forEach(([key, val]) => {
-      element.setAttribute(key, val);
-    });
-  } else {
-    element.setAttribute(name, value);
-  }
-}
-
-/**
- * Get attribute from element
- * @param {Element} element 
- * @param {string} name 
- * @returns {string|null}
- */
-function getAttr(element, name) {
-  return element.getAttribute(name);
-}
-
-/**
- * Remove attribute from element
- * @param {Element} element 
- * @param {string} name 
- */
-function removeAttr(element, name) {
-  element.removeAttribute(name);
-}
-
-/**
- * Remove element from DOM
- * @param {Element} element 
- */
-function remove(element) {
-  element.remove();
-}
 
 /**
  * Create element from HTML string
@@ -149,156 +19,17 @@ function createFromHTML(html) {
 }
 
 /**
- * Sandal - Modern Event Utilities
- * Vanilla JavaScript helpers for event handling
+ * Sandal - Advanced Animation Utilities
+ * Uses Web Animation API for animations not covered by JQNext
+ * JQNext provides: fadeIn, fadeOut, slideDown, slideUp, slideToggle, animate
  */
 
-// WeakMap to store event handlers for cleanup
-const handlerStorage = new WeakMap();
-
-/**
- * Add event listener
- * @param {Element|Window|Document} element 
- * @param {string} eventType - Event type(s), space-separated for multiple
- * @param {Function|string} handler - Handler function or selector for delegation
- * @param {Function} [delegatedHandler] - Handler when using delegation
- * @param {Object} [options] - addEventListener options
- */
-function on(element, eventType, handler, delegatedHandler, options = {}) {
-  const events = eventType.split(' ').filter(Boolean);
-  
-  events.forEach(event => {
-    let actualHandler;
-    let selector = null;
-    
-    // Check if using event delegation
-    if (typeof handler === 'string') {
-      selector = handler;
-      actualHandler = (e) => {
-        const target = e.target.closest(selector);
-        if (target && element.contains(target)) {
-          delegatedHandler.call(target, e, target);
-        }
-      };
-    } else {
-      actualHandler = handler;
-    }
-    
-    element.addEventListener(event, actualHandler, options);
-    
-    // Store for potential removal
-    if (!handlerStorage.has(element)) {
-      handlerStorage.set(element, new Map());
-    }
-    const elementHandlers = handlerStorage.get(element);
-    const key = `${event}${selector || ''}`;
-    if (!elementHandlers.has(key)) {
-      elementHandlers.set(key, []);
-    }
-    elementHandlers.get(key).push({
-      original: handler,
-      actual: actualHandler,
-      selector,
-      options
-    });
-  });
-}
-
-/**
- * Remove event listener
- * @param {Element|Window|Document} element 
- * @param {string} eventType - Event type(s), space-separated
- * @param {Function|string} [handler] - Original handler or selector
- */
-function off(element, eventType, handler) {
-  const events = eventType.split(' ').filter(Boolean);
-  const elementHandlers = handlerStorage.get(element);
-  
-  if (!elementHandlers) return;
-  
-  events.forEach(event => {
-    if (!handler) {
-      // Remove all handlers for this event
-      elementHandlers.forEach((handlers, key) => {
-        if (key.startsWith(event)) {
-          handlers.forEach(h => {
-            element.removeEventListener(event, h.actual, h.options);
-          });
-          elementHandlers.delete(key);
-        }
-      });
-    } else {
-      const selector = typeof handler === 'string' ? handler : '';
-      const key = `${event}${selector}`;
-      const handlers = elementHandlers.get(key);
-      
-      if (handlers) {
-        const idx = handlers.findIndex(h => 
-          typeof handler === 'string' 
-            ? h.selector === handler 
-            : h.original === handler
-        );
-        if (idx !== -1) {
-          element.removeEventListener(event, handlers[idx].actual, handlers[idx].options);
-          handlers.splice(idx, 1);
-        }
-      }
-    }
-  });
-}
-
-/**
- * Sandal - Modern Animation Utilities
- * Web Animation API based helpers
- */
-
-/**
- * Default animation options
- */
-const DEFAULT_OPTIONS = {
-  duration: 300,
-  easing: 'ease',
-  fill: 'forwards'
-};
-
-/**
- * Animate element using Web Animation API
- * @param {Element} element 
- * @param {Keyframe[]} keyframes 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-function animate(element, keyframes, options = {}) {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  const animation = element.animate(keyframes, opts);
-  
-  return new Promise((resolve, reject) => {
-    animation.onfinish = () => resolve(animation);
-    animation.oncancel = () => reject(new Error('Animation cancelled'));
-  });
-}
-
-/**
- * Fade out element
- * @param {Element} element 
- * @param {Object} options 
- * @returns {Promise<Animation>}
- */
-async function fadeOut(element, options = {}) {
-  await animate(element, [
-    { opacity: 1 },
-    { opacity: 0 }
-  ], { duration: 150, ...options });
-  
-  element.style.display = 'none';
-  element.style.opacity = '';
-}
 
 /**
  * Reflow element (force layout recalculation)
  * @param {Element} element 
  */
-function reflow(element) {
+function reflow$1(element) {
   return element.offsetHeight;
 }
 
@@ -573,47 +304,37 @@ function getContainer(container, defaultContainer = document.body) {
 
 /**
  * Sandal - Utility Modules
- * Modern vanilla JavaScript utilities
+ * Simplified to use JQNext for core functionality
  */
 
 
 /**
- * Instance storage using WeakMap (modern alternative to $.data)
- */
-const instanceStorage = new WeakMap();
-
-/**
- * Store component instance on element
+ * Store component instance on element using JQNext's data system
  * @param {Element} element 
  * @param {string} key - Component key (e.g., 'bs.modal')
  * @param {Object} instance 
  */
 function setInstance(element, key, instance) {
-  if (!instanceStorage.has(element)) {
-    instanceStorage.set(element, new Map());
-  }
-  instanceStorage.get(element).set(key, instance);
+  $(element).data(key, instance);
 }
 
 /**
- * Get component instance from element
+ * Get component instance from element using JQNext's data system
  * @param {Element} element 
  * @param {string} key 
  * @returns {Object|null}
  */
 function getInstance(element, key) {
-  if (!instanceStorage.has(element)) return null;
-  return instanceStorage.get(element).get(key) || null;
+  return $(element).data(key) || null;
 }
 
 /**
- * Remove component instance from element
+ * Remove component instance from element using JQNext's data system
  * @param {Element} element 
  * @param {string} key 
  */
 function removeInstance(element, key) {
-  if (!instanceStorage.has(element)) return;
-  instanceStorage.get(element).delete(key);
+  $(element).removeData(key);
 }
 
 /**
@@ -652,17 +373,6 @@ function parseDataOptions(element, defaults = {}, prefix = '') {
   });
   
   return options;
-}
-
-/**
- * Sanitize HTML string (basic XSS prevention)
- * @param {string} html 
- * @returns {string}
- */
-function sanitizeHTML(html) {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
 }
 
 /**
@@ -748,7 +458,7 @@ function getFocusable(container) {
 
 /**
  * Sandal Modal Component
- * Modern vanilla JS implementation with Bootstrap 3 API compatibility
+ * Modern implementation using JQNext for DOM operations
  * Uses Web Animation API for smooth animations
  */
 
@@ -765,7 +475,7 @@ const DEFAULTS$7 = {
   focus: true
 };
 
-const EVENTS$8 = {
+const EVENTS$7 = {
   SHOW: `show${EVENT_KEY$9}`,
   SHOWN: `shown${EVENT_KEY$9}`,
   HIDE: `hide${EVENT_KEY$9}`,
@@ -804,11 +514,14 @@ class Modal {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    // Use JQNext for element selection
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
-    this._dialog = $(SELECTORS$a.DIALOG, this._element);
+    this.$dialog = this.$element.find(SELECTORS$a.DIALOG);
+    this._dialog = this.$dialog[0];
     this._backdrop = null;
     this._isShown = false;
     this._isTransitioning = false;
@@ -861,7 +574,7 @@ class Modal {
     if (this._isShown || this._isTransitioning) return;
     
     // Dispatch show event (cancelable)
-    const showEvent = this._triggerEvent(EVENTS$8.SHOW, { relatedTarget });
+    const showEvent = this._triggerEvent(EVENTS$7.SHOW, { relatedTarget });
     if (showEvent.defaultPrevented) return;
     
     this._isShown = true;
@@ -871,24 +584,23 @@ class Modal {
     this._checkScrollbar();
     this._setScrollbar();
     
-    // Add modal-open class to body
-    addClass(document.body, CLASSES$9.OPEN);
+    // Add modal-open class to body using JQNext
+    $('body').addClass(CLASSES$9.OPEN);
     
     // Set up modal
     this._escape();
     this._resize();
     
-    // Dismiss button handler
-    on(this._element, 'click', SELECTORS$a.DATA_DISMISS, () => this.hide());
+    // Dismiss button handler using JQNext event delegation
+    this.$element.on('click', SELECTORS$a.DATA_DISMISS, () => this.hide());
     
     // Backdrop click handler
-    on(this._dialog, 'mousedown', () => {
-      on(this._element, 'mouseup', (e) => {
-        off(this._element, 'mouseup');
+    this.$dialog.on('mousedown', () => {
+      this.$element.one('mouseup', (e) => {
         if (e.target === this._element) {
           this._ignoreBackdropClick = true;
         }
-      }, { once: true });
+      });
     });
     
     // Show backdrop then modal
@@ -904,7 +616,7 @@ class Modal {
     }
     
     // Dispatch shown event
-    this._triggerEvent(EVENTS$8.SHOWN, { relatedTarget });
+    this._triggerEvent(EVENTS$7.SHOWN, { relatedTarget });
   }
   
   /**
@@ -914,7 +626,7 @@ class Modal {
     if (!this._isShown || this._isTransitioning) return;
     
     // Dispatch hide event (cancelable)
-    const hideEvent = this._triggerEvent(EVENTS$8.HIDE);
+    const hideEvent = this._triggerEvent(EVENTS$7.HIDE);
     if (hideEvent.defaultPrevented) return;
     
     this._isShown = false;
@@ -927,15 +639,15 @@ class Modal {
     }
     
     // Remove escape handler
-    off(document, 'keydown', this._escapeHandler);
+    $(document).off('keydown', this._escapeHandler);
     
     // Remove resize handler
-    off(window, 'resize', this._resizeHandler);
+    $(window).off('resize', this._resizeHandler);
     
-    // Hide modal then backdrop
-    removeClass(this._element, CLASSES$9.IN);
+    // Hide modal then backdrop using JQNext
+    this.$element.removeClass(CLASSES$9.IN);
     
-    if (hasClass(this._element, CLASSES$9.FADE)) {
+    if (this.$element.hasClass(CLASSES$9.FADE)) {
       await this._waitForTransition(this._element, TRANSITION_DURATION$2);
     }
     
@@ -944,7 +656,7 @@ class Modal {
     this._isTransitioning = false;
     
     // Dispatch hidden event
-    this._triggerEvent(EVENTS$8.HIDDEN);
+    this._triggerEvent(EVENTS$7.HIDDEN);
   }
   
   /**
@@ -958,11 +670,11 @@ class Modal {
    * Destroy the modal instance
    */
   dispose() {
-    // Remove event listeners
-    off(this._element, 'click');
-    off(this._dialog, 'mousedown');
-    off(document, 'keydown', this._escapeHandler);
-    off(window, 'resize', this._resizeHandler);
+    // Remove event listeners using JQNext
+    this.$element.off('click');
+    this.$dialog.off('mousedown');
+    $(document).off('keydown', this._escapeHandler);
+    $(window).off('resize', this._resizeHandler);
     
     // Remove focus trap
     if (this._focusTrap) {
@@ -989,7 +701,7 @@ class Modal {
    * @private
    */
   _bindEvents() {
-    on(this._element, 'click', (e) => {
+    this.$element.on('click', (e) => {
       if (e.target !== this._element) return;
       if (this._ignoreBackdropClick) {
         this._ignoreBackdropClick = false;
@@ -1008,27 +720,28 @@ class Modal {
    */
   async _showBackdrop() {
     if (this._options.backdrop) {
-      this._backdrop = document.createElement('div');
-      this._backdrop.className = CLASSES$9.BACKDROP;
+      // Create backdrop using JQNext
+      this.$backdrop = $('<div>').addClass(CLASSES$9.BACKDROP);
+      this._backdrop = this.$backdrop[0];
       
-      if (hasClass(this._element, CLASSES$9.FADE)) {
-        addClass(this._backdrop, CLASSES$9.FADE);
+      if (this.$element.hasClass(CLASSES$9.FADE)) {
+        this.$backdrop.addClass(CLASSES$9.FADE);
       }
       
-      document.body.appendChild(this._backdrop);
+      this.$backdrop.appendTo('body');
       
       // Click handler for backdrop
-      on(this._backdrop, 'click', () => {
+      this.$backdrop.on('click', () => {
         if (this._options.backdrop !== 'static') {
           this.hide();
         }
       });
       
       // Animate in
-      reflow(this._backdrop);
-      addClass(this._backdrop, CLASSES$9.IN);
+      reflow$1(this._backdrop);
+      this.$backdrop.addClass(CLASSES$9.IN);
       
-      if (hasClass(this._backdrop, CLASSES$9.FADE)) {
+      if (this.$backdrop.hasClass(CLASSES$9.FADE)) {
         await this._waitForTransition(this._backdrop, BACKDROP_DURATION);
       }
     }
@@ -1040,22 +753,25 @@ class Modal {
    * @private
    */
   async _showModal() {
-    this._element.style.display = 'block';
-    this._element.removeAttribute('aria-hidden');
-    setAttr(this._element, 'aria-modal', 'true');
-    setAttr(this._element, 'role', 'dialog');
-    this._element.scrollTop = 0;
+    // Show modal using JQNext
+    this.$element.css('display', 'block')
+      .removeAttr('aria-hidden')
+      .attr({
+        'aria-modal': 'true',
+        'role': 'dialog'
+      })
+      .scrollTop(0);
     
-    if (this._dialog) {
-      this._dialog.scrollTop = 0;
+    if (this.$dialog.length) {
+      this.$dialog.scrollTop(0);
     }
     
     this._adjustDialog();
     
-    reflow(this._element);
-    addClass(this._element, CLASSES$9.IN);
+    reflow$1(this._element);
+    this.$element.addClass(CLASSES$9.IN);
     
-    if (hasClass(this._element, CLASSES$9.FADE)) {
+    if (this.$element.hasClass(CLASSES$9.FADE)) {
       await this._waitForTransition(this._dialog || this._element, TRANSITION_DURATION$2);
     }
   }
@@ -1066,24 +782,26 @@ class Modal {
    * @private
    */
   async _hideModal() {
-    this._element.style.display = 'none';
-    setAttr(this._element, 'aria-hidden', 'true');
-    removeAttr(this._element, 'aria-modal');
-    removeAttr(this._element, 'role');
+    // Hide modal using JQNext
+    this.$element.css('display', 'none')
+      .attr('aria-hidden', 'true')
+      .removeAttr('aria-modal')
+      .removeAttr('role');
     
     // Reset scrollbar
     this._resetScrollbar();
-    removeClass(document.body, CLASSES$9.OPEN);
+    $('body').removeClass(CLASSES$9.OPEN);
     
     // Remove backdrop
-    if (this._backdrop) {
-      removeClass(this._backdrop, CLASSES$9.IN);
+    if (this.$backdrop) {
+      this.$backdrop.removeClass(CLASSES$9.IN);
       
-      if (hasClass(this._backdrop, CLASSES$9.FADE)) {
+      if (this.$backdrop.hasClass(CLASSES$9.FADE)) {
         await this._waitForTransition(this._backdrop, BACKDROP_DURATION);
       }
       
-      this._backdrop.remove();
+      this.$backdrop.remove();
+      this.$backdrop = null;
       this._backdrop = null;
     }
   }
@@ -1100,7 +818,7 @@ class Modal {
           this.hide();
         }
       };
-      on(document, 'keydown', this._escapeHandler);
+      $(document).on('keydown', this._escapeHandler);
     }
   }
   
@@ -1114,7 +832,7 @@ class Modal {
         this._adjustDialog();
       }
     };
-    on(window, 'resize', this._resizeHandler);
+    $(window).on('resize', this._resizeHandler);
   }
   
   /**
@@ -1169,14 +887,14 @@ class Modal {
       const computedPadding = parseFloat(getComputedStyle(document.body).paddingRight);
       document.body.style.paddingRight = `${computedPadding + this._scrollbarWidth}px`;
       
-      // Fixed elements
-      const fixedContent = $$$1(SELECTORS$a.FIXED_CONTENT);
-      for (const element of fixedContent) {
+      // Fixed elements using JQNext
+      $(SELECTORS$a.FIXED_CONTENT).each(function() {
+        const element = this;
         const actualPadding = element.style.paddingRight;
         const calculatedPadding = parseFloat(getComputedStyle(element).paddingRight);
         element.dataset.paddingRight = actualPadding;
         element.style.paddingRight = `${calculatedPadding + this._scrollbarWidth}px`;
-      }
+      });
     }
   }
   
@@ -1187,14 +905,14 @@ class Modal {
   _resetScrollbar() {
     document.body.style.paddingRight = this._originalPadding || '';
     
-    const fixedContent = $$$1(SELECTORS$a.FIXED_CONTENT);
-    for (const element of fixedContent) {
+    $(SELECTORS$a.FIXED_CONTENT).each(function() {
+      const element = this;
       const padding = element.dataset.paddingRight;
       if (padding !== undefined) {
         element.style.paddingRight = padding;
         delete element.dataset.paddingRight;
       }
-    }
+    });
   }
   
   /**
@@ -1223,30 +941,15 @@ class Modal {
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    // Use jQuery/JQNext trigger if available - this ensures proper namespace handling
+    // Use JQNext trigger for proper namespace handling
     // and compatibility with jQuery event handlers (like those in preside.iframe.modal.js)
-    const $ = window.jQuery || window.presideJQuery;
-    
-    if ($ && $.fn && $.fn.trigger) {
-      // Use jQuery's trigger which properly handles namespaced events
-      const event = $.Event(eventType, detail);
-      $(this._element).trigger(event);
-      return event;
-    }
-    
-    // Fallback to native CustomEvent if jQuery is not available
-    // Parse event type and namespace (e.g., "hide.bs.modal" -> type: "hide", namespace: "bs.modal")
-    const parts = eventType.split('.');
-    const baseType = parts[0];
-    
-    const event = new CustomEvent(baseType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$8.SHOW || eventType === EVENTS$8.HIDE,
-      detail
-    });
-    
-    this._element.dispatchEvent(event);
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
+    
+    /* Fallback no longer needed - JQNext is always available
+    // Parse event type and namespace (e.g., "hide.bs.modal" -> type: "hide", namespace: "bs.modal")
+    */
   }
   
   // Static methods
@@ -1278,31 +981,33 @@ class Modal {
     const trigger = event.currentTarget || event.target.closest(SELECTORS$a.DATA_TOGGLE);
     if (!trigger) return;
     
-    // Get target
-    let target = getAttr(trigger, 'data-target');
+    // Get target using JQNext
+    const $trigger = $(trigger);
+    let target = $trigger.attr('data-target');
     if (!target) {
-      const href = getAttr(trigger, 'href');
+      const href = $trigger.attr('href');
       if (href) {
         target = href.replace(/.*(?=#[^\s]+$)/, ''); // Strip for IE7
       }
     }
     
-    const modalElement = $(target);
-    if (!modalElement) return;
+    const $modalElement = $(target);
+    if (!$modalElement.length) return;
     
     event.preventDefault();
     
-    // Get options from trigger
+    // Get options from trigger using JQNext
     const options = {};
-    if (trigger.hasAttribute('data-backdrop')) {
-      const backdrop = getAttr(trigger, 'data-backdrop');
+    const backdrop = $trigger.attr('data-backdrop');
+    if (backdrop !== undefined) {
       options.backdrop = backdrop === 'static' ? 'static' : backdrop !== 'false';
     }
-    if (trigger.hasAttribute('data-keyboard')) {
-      options.keyboard = getAttr(trigger, 'data-keyboard') !== 'false';
+    const keyboard = $trigger.attr('data-keyboard');
+    if (keyboard !== undefined) {
+      options.keyboard = keyboard !== 'false';
     }
     
-    const instance = Modal.getOrCreateInstance(modalElement, options);
+    const instance = Modal.getOrCreateInstance($modalElement[0], options);
     instance.toggle(trigger);
   }
   
@@ -1329,6 +1034,77 @@ class Modal {
 }
 
 /**
+ * Shared component helpers
+ * Wraps JQNext functions for component use
+ */
+
+
+// Element selection
+const $$ = (selector, context) => Array.from((context || document).querySelectorAll(selector));
+const $1 = (selector, context) => (context || document).querySelector(selector);
+
+// DOM traversal
+const closest = (el, selector) => $(el).closest(selector)[0];
+const children = (el) => Array.from(el.children);
+
+// Classes
+const hasClass = (el, className) => $(el).hasClass(className);
+const addClass = (el, className) => $(el).addClass(className);
+const removeClass = (el, className) => $(el).removeClass(className);
+const toggleClass = (el, className) => $(el).toggleClass(className);
+
+// Attributes
+const getAttr = (el, attr) => $(el).attr(attr);
+const setAttr = (el, attr, value) => $(el).attr(attr, value);
+const removeAttr = (el, attr) => $(el).removeAttr(attr);
+const remove = (el) => $(el).remove();
+
+// Events - Support delegated events and options like jQuery
+const on = (el, event, selectorOrHandler, handlerOrOptions, options) => {
+  const $el = $(el);
+  
+  // Case 1: on(el, event, handler) - Simple event
+  if (typeof selectorOrHandler === 'function' && !handlerOrOptions) {
+    $el.on(event, selectorOrHandler);
+  }
+  // Case 2: on(el, event, selector, handler) - Delegated event
+  else if (typeof selectorOrHandler === 'string' && typeof handlerOrOptions === 'function') {
+    $el.on(event, selectorOrHandler, handlerOrOptions);
+  }
+  // Case 3: on(el, event, handler, options) - Event with options (ignore options, not supported)
+  else if (typeof selectorOrHandler === 'function' && typeof handlerOrOptions === 'object') {
+    $el.on(event, selectorOrHandler);
+  }
+};
+
+const off = (el, event, selector) => {
+  if (selector) {
+    $(el).off(event, selector);
+  } else {
+    $(el).off(event);
+  }
+};
+
+const fadeOut = (el, options = {}) => {
+  return new Promise(resolve => {
+    const duration = options.duration !== undefined ? options.duration : 150;
+    $(el).fadeOut(duration, function() {
+      resolve();
+    });
+  });
+};
+
+// Reflow
+const reflow = (el) => el.offsetHeight;
+
+// Utilities
+const sanitizeHTML = (html) => {
+  const div = document.createElement('div');
+  div.textContent = html;
+  return div.innerHTML;
+};
+
+/**
  * Sandal Dropdown Component
  * Modern vanilla JS implementation with Bootstrap 3 API compatibility
  */
@@ -1347,7 +1123,7 @@ const DEFAULTS$6 = {
   display: 'dynamic'
 };
 
-const EVENTS$7 = {
+const EVENTS$6 = {
   SHOW: `show${EVENT_KEY$8}`,
   SHOWN: `shown${EVENT_KEY$8}`,
   HIDE: `hide${EVENT_KEY$8}`,
@@ -1390,7 +1166,8 @@ class Dropdown {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -1445,7 +1222,7 @@ class Dropdown {
     if (isDisabled(this._element) || this._isShown()) return;
     
     // Dispatch show event (cancelable)
-    const showEvent = this._triggerEvent(EVENTS$7.SHOW, { relatedTarget: this._element });
+    const showEvent = this._triggerEvent(EVENTS$6.SHOW, { relatedTarget: this._element });
     if (showEvent.defaultPrevented) return;
     
     // Add open class to parent
@@ -1461,7 +1238,7 @@ class Dropdown {
     this._element.focus();
     
     // Dispatch shown event
-    this._triggerEvent(EVENTS$7.SHOWN, { relatedTarget: this._element });
+    this._triggerEvent(EVENTS$6.SHOWN, { relatedTarget: this._element });
   }
   
   /**
@@ -1471,7 +1248,7 @@ class Dropdown {
     if (!this._isShown()) return;
     
     // Dispatch hide event (cancelable)
-    const hideEvent = this._triggerEvent(EVENTS$7.HIDE, { relatedTarget: this._element });
+    const hideEvent = this._triggerEvent(EVENTS$6.HIDE, { relatedTarget: this._element });
     if (hideEvent.defaultPrevented) return;
     
     // Remove open class
@@ -1484,7 +1261,7 @@ class Dropdown {
     this._removeDocumentListener();
     
     // Dispatch hidden event
-    this._triggerEvent(EVENTS$7.HIDDEN, { relatedTarget: this._element });
+    this._triggerEvent(EVENTS$6.HIDDEN, { relatedTarget: this._element });
   }
   
   /**
@@ -1599,7 +1376,7 @@ class Dropdown {
       return;
     }
     
-    const items = $$$1(SELECTORS$9.VISIBLE_ITEMS, this._menu);
+    const items = $$(SELECTORS$9.VISIBLE_ITEMS, this._menu);
     if (items.length === 0) return;
     
     let index = items.indexOf(document.activeElement);
@@ -1656,18 +1433,15 @@ class Dropdown {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$7.SHOW || eventType === EVENTS$7.HIDE,
-      detail
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
   }
   
@@ -1696,7 +1470,7 @@ class Dropdown {
    * Close all open dropdowns
    */
   static closeAll() {
-    const openDropdowns = $$$1(`.${CLASSES$8.OPEN}`);
+    const openDropdowns = $$(`.${CLASSES$8.OPEN}`);
     for (const dropdown of openDropdowns) {
       const toggle = $(SELECTORS$9.DATA_TOGGLE, dropdown);
       if (toggle) {
@@ -1795,7 +1569,7 @@ const DEFAULTS$5 = {
   viewport: { selector: 'body', padding: 0 }
 };
 
-const EVENTS$6 = {
+const EVENTS$5 = {
   SHOW: `show${EVENT_KEY$7}`,
   SHOWN: `shown${EVENT_KEY$7}`,
   HIDE: `hide${EVENT_KEY$7}`,
@@ -1838,7 +1612,8 @@ class Tooltip {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -1938,7 +1713,7 @@ class Tooltip {
     }
     
     // Dispatch show event (cancelable)
-    const showEvent = this._triggerEvent(EVENTS$6.SHOW);
+    const showEvent = this._triggerEvent(EVENTS$5.SHOW);
     if (showEvent.defaultPrevented) {
       return;
     }
@@ -1984,7 +1759,7 @@ class Tooltip {
     container.appendChild(tip);
     
     // Dispatch inserted event
-    this._triggerEvent(EVENTS$6.INSERTED);
+    this._triggerEvent(EVENTS$5.INSERTED);
     
     // Position the tooltip WHILE INVISIBLE
     await this._updatePosition();
@@ -2012,7 +1787,7 @@ class Tooltip {
     this._hoverState = '';
     
     // Dispatch shown event
-    this._triggerEvent(EVENTS$6.SHOWN);
+    this._triggerEvent(EVENTS$5.SHOWN);
   }
   
   /**
@@ -2022,7 +1797,7 @@ class Tooltip {
     const tip = this.tip;
     
     // Dispatch hide event (cancelable)
-    const hideEvent = this._triggerEvent(EVENTS$6.HIDE);
+    const hideEvent = this._triggerEvent(EVENTS$5.HIDE);
     if (hideEvent.defaultPrevented) return;
     
     // Clean up auto-update
@@ -2050,7 +1825,7 @@ class Tooltip {
     removeAttr(this._element, 'aria-describedby');
     
     // Dispatch hidden event
-    this._triggerEvent(EVENTS$6.HIDDEN);
+    this._triggerEvent(EVENTS$5.HIDDEN);
   }
   
   /**
@@ -2084,6 +1859,13 @@ class Tooltip {
     this._element = null;
     this._options = null;
     this._tip = null;
+  }
+  
+  /**
+   * Destroy tooltip instance (Bootstrap 3 alias for dispose)
+   */
+  destroy() {
+    this.dispose();
   }
   
   // Private methods
@@ -2333,16 +2115,15 @@ class Tooltip {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$6.SHOW || eventType === EVENTS$6.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    // and compatibility with jQuery event handlers
+    const event = $.Event(eventType);
+    this.$element.trigger(event);
     return event;
   }
   
@@ -2416,14 +2197,6 @@ const DEFAULTS$4 = {
   template: '<div class="popover" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
 };
 
-const EVENTS$5 = {
-  SHOW: `show${EVENT_KEY$6}`,
-  SHOWN: `shown${EVENT_KEY$6}`,
-  HIDE: `hide${EVENT_KEY$6}`,
-  HIDDEN: `hidden${EVENT_KEY$6}`,
-  INSERTED: `inserted${EVENT_KEY$6}`
-};
-
 const SELECTORS$7 = {
   TITLE: '.popover-title',
   CONTENT: '.popover-content',
@@ -2445,6 +2218,9 @@ class Popover extends Tooltip {
     super(element, options);
     
     if (!this._element) return;
+    
+    // Store jQuery reference
+    this.$element = $(this._element);
     
     // Re-store with popover data key
     removeInstance(this._element, Tooltip.DATA_KEY);
@@ -2559,8 +2335,8 @@ class Popover extends Tooltip {
    * @private
    */
   _setContent(tip, title) {
-    const titleEl = $(SELECTORS$7.TITLE, tip);
-    const contentEl = $(SELECTORS$7.CONTENT, tip);
+    const titleEl = $1(SELECTORS$7.TITLE, tip);
+    const contentEl = $1(SELECTORS$7.CONTENT, tip);
     
     // Set title
     if (titleEl) {
@@ -2618,19 +2394,17 @@ class Popover extends Tooltip {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
     // Map tooltip events to popover events
     const popoverEventType = eventType.replace('.bs.tooltip', EVENT_KEY$6);
     
-    const event = new CustomEvent(popoverEventType, {
-      bubbles: true,
-      cancelable: popoverEventType === EVENTS$5.SHOW || popoverEventType === EVENTS$5.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(popoverEventType);
+    this.$element.trigger(event);
     return event;
   }
   
@@ -2733,7 +2507,8 @@ class Tab {
    * @param {Element} element - The tab trigger element
    */
   constructor(element) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -2785,7 +2560,7 @@ class Tab {
       const activeChildren = children(listElement).filter(child => hasClass(child, CLASSES$6.ACTIVE));
       if (activeChildren.length > 0) {
         previous = activeChildren[0];
-        previousTab = $(SELECTORS$6.DATA_TOGGLE, previous) || previous;
+        previousTab = $1(SELECTORS$6.DATA_TOGGLE, previous) || previous;
       } else {
         // Check for li > .active pattern
         const activeLi = listElement.querySelector(':scope > li > .active');
@@ -2821,7 +2596,7 @@ class Tab {
     this._activate(this._element, listElement, false);
     
     // Activate the pane
-    const target = targetSelector ? $(targetSelector) : null;
+    const target = targetSelector ? $1(targetSelector) : null;
     if (target) {
       const container = target.parentElement;
       this._activate(target, container, true);
@@ -2931,36 +2706,30 @@ class Tab {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$4.SHOW || eventType === EVENTS$4.HIDE,
-      detail
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
   }
   
   /**
    * Trigger event on specific element
-   * @param {Element} element 
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {Element} element
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEventOn(element, eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$4.SHOW || eventType === EVENTS$4.HIDE,
-      detail
-    });
-    element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    $(element).trigger(event);
     return event;
   }
   
@@ -3067,7 +2836,8 @@ class Collapse {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -3082,11 +2852,11 @@ class Collapse {
     this._triggerArray = [];
     
     // Find all triggers for this collapse
-    const toggleList = $$$1(SELECTORS$5.DATA_TOGGLE);
+    const toggleList = $$(SELECTORS$5.DATA_TOGGLE);
     for (const toggle of toggleList) {
       const selector = getAttr(toggle, 'data-target') || getAttr(toggle, 'href');
       if (selector) {
-        const filterElement = $$$1(selector).filter(el => el === this._element);
+        const filterElement = $$(selector).filter(el => el === this._element);
         if (filterElement.length > 0) {
           this._triggerArray.push(toggle);
         }
@@ -3140,7 +2910,7 @@ class Collapse {
     
     // Accordion behavior - close other panels
     if (this._parent) {
-      actives = $$$1(SELECTORS$5.ACTIVES, this._parent).filter(elem => {
+      actives = $$(SELECTORS$5.ACTIVES, this._parent).filter(elem => {
         if (this._options.parent) {
           return closest(elem, this._options.parent) === this._parent;
         }
@@ -3305,7 +3075,7 @@ class Collapse {
     if (typeof parent === 'string') {
       // Check if it's an ID selector
       if (parent.charAt(0) === '#') {
-        return $(parent);
+        return $1(parent);
       }
       // Try to find parent from element's context
       return closest(this._element, parent);
@@ -3353,16 +3123,14 @@ class Collapse {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS$3.SHOW || eventType === EVENTS$3.HIDE
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType);
+    this.$element.trigger(event);
     return event;
   }
   
@@ -3406,7 +3174,7 @@ class Collapse {
     
     if (!selector) return;
     
-    const targets = $$$1(selector);
+    const targets = $$(selector);
     
     for (const target of targets) {
       const options = {
@@ -3482,7 +3250,7 @@ class Alert {
    * @param {Element} element - The alert element
    */
   constructor(element) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this._element = typeof element === 'string' ? $1(element) : element;
     
     if (!this._element) return;
     
@@ -3561,30 +3329,29 @@ class Alert {
       await fadeOut(element, { duration: 150 });
     }
     
-    // Dispatch closed event
-    this._triggerEvent(EVENTS$2.CLOSED, element);
-    
-    // Remove from DOM and clean up
+    // Remove from DOM and clean up BEFORE triggering closed event
     const instance = getInstance(element, DATA_KEY$4);
     if (instance) {
       instance.dispose();
     }
     remove(element);
+    
+    // Dispatch closed event AFTER removal
+    this._triggerEvent(EVENTS$2.CLOSED, element);
   }
   
   /**
-   * Trigger custom event
-   * @param {string} eventType 
-   * @param {Element} element 
-   * @returns {CustomEvent}
+   * Trigger jQuery event
+   * @param {string} eventType
+   * @param {Element} element
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, element) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
+    const event = $.Event(eventType, {
       cancelable: eventType === EVENTS$2.CLOSE
     });
-    element.dispatchEvent(event);
+    $(element).trigger(event);
     return event;
   }
   
@@ -3670,7 +3437,7 @@ class Button {
    * @param {Element} element - The button element
    */
   constructor(element) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this._element = typeof element === 'string' ? $1(element) : element;
     
     if (!this._element) return;
     
@@ -3907,7 +3674,7 @@ class Carousel {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this._element = typeof element === 'string' ? $1(element) : element;
     
     if (!this._element) return;
     
@@ -3925,7 +3692,7 @@ class Carousel {
     };
     
     // Get indicators
-    this._indicatorsElement = $(SELECTORS$2.INDICATORS, this._element);
+    this._indicatorsElement = $1(SELECTORS$2.INDICATORS, this._element);
     
     // Bind events
     this._bindEvents();
@@ -3975,7 +3742,7 @@ class Carousel {
     }
     
     // Check for next/prev elements
-    if ($(SELECTORS$2.NEXT_PREV, this._element)) {
+    if ($1(SELECTORS$2.NEXT_PREV, this._element)) {
       this._isPaused = true;
     }
     
@@ -4007,7 +3774,7 @@ class Carousel {
    */
   to(index) {
     const items = this._getItems();
-    const activeIndex = this._getItemIndex($(SELECTORS$2.ACTIVE_ITEM, this._element));
+    const activeIndex = this._getItemIndex($1(SELECTORS$2.ACTIVE_ITEM, this._element));
     
     if (index > items.length - 1 || index < 0) return;
     
@@ -4126,7 +3893,7 @@ class Carousel {
    */
   _getItems() {
     if (!this._items) {
-      this._items = $$$1(SELECTORS$2.ITEM, this._element);
+      this._items = $$(SELECTORS$2.ITEM, this._element);
     }
     return this._items;
   }
@@ -4174,7 +3941,7 @@ class Carousel {
    * @private
    */
   async _slide(direction, element) {
-    const activeElement = $(SELECTORS$2.ACTIVE_ITEM, this._element);
+    const activeElement = $1(SELECTORS$2.ACTIVE_ITEM, this._element);
     const activeElementIndex = this._getItemIndex(activeElement);
     const nextElement = element || (activeElement && this._getItemByDirection(direction, activeElement));
     const nextElementIndex = this._getItemIndex(nextElement);
@@ -4278,7 +4045,7 @@ class Carousel {
    */
   _setActiveIndicator(element) {
     if (this._indicatorsElement) {
-      const indicators = $$$1(SELECTORS$2.ACTIVE, this._indicatorsElement);
+      const indicators = $$(SELECTORS$2.ACTIVE, this._indicatorsElement);
       for (const indicator of indicators) {
         removeClass(indicator, CLASSES$2.ACTIVE);
       }
@@ -4302,19 +4069,18 @@ class Carousel {
   }
   
   /**
-   * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * Trigger jQuery event
+   * @param {string} eventType
+   * @param {Object} extraData
+   * @returns {Event}
    * @private
    */
-  _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
+  _triggerEvent(eventType, extraData = {}) {
+    const event = $.Event(eventType, {
       cancelable: eventType === EVENTS$1.SLIDE,
-      detail
+      ...extraData
     });
-    this._element.dispatchEvent(event);
+    $(this._element).trigger(event);
     return event;
   }
   
@@ -4352,7 +4118,7 @@ class Carousel {
     
     if (!targetSelector) return;
     
-    const carousel = $(targetSelector);
+    const carousel = $1(targetSelector);
     if (!carousel) return;
     
     event.preventDefault();
@@ -4377,7 +4143,7 @@ class Carousel {
    * Auto-initialize carousels with data-ride
    */
   static autoInit() {
-    const carousels = $$$1(SELECTORS$2.DATA_RIDE);
+    const carousels = $$(SELECTORS$2.DATA_RIDE);
     for (const carousel of carousels) {
       Carousel.getOrCreateInstance(carousel);
     }
@@ -4459,7 +4225,7 @@ class Scrollspy {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this._element = typeof element === 'string' ? $1(element) : element;
     
     if (!this._element) return;
     
@@ -4508,11 +4274,11 @@ class Scrollspy {
     const targetSelector = this._selector;
     if (!targetSelector) return;
     
-    const nav = $(targetSelector);
+    const nav = $1(targetSelector);
     if (!nav) return;
     
     // Get all links in target navigation
-    const navLinks = $$$1('a[href]', nav).filter(link => {
+    const navLinks = $$('a[href]', nav).filter(link => {
       const href = getAttr(link, 'href');
       return href && href.charAt(0) === '#' && href.length > 1;
     });
@@ -4526,7 +4292,7 @@ class Scrollspy {
     // Build targets list
     for (const link of navLinks) {
       const href = getAttr(link, 'href');
-      const target = $(href);
+      const target = $1(href);
       
       if (target) {
         const targetBCR = target.getBoundingClientRect();
@@ -4582,7 +4348,7 @@ class Scrollspy {
   _setupIntersectionObserver() {
     // Get all target elements
     const targetElements = this._targets
-      .map(href => $(href))
+      .map(href => $1(href))
       .filter(Boolean);
     
     if (targetElements.length === 0) return;
@@ -4679,14 +4445,14 @@ class Scrollspy {
     const queries = this._selector.split(',')
       .map(sel => `${sel} a[href="${target}"], ${sel} [data-target="${target}"]`);
     
-    const links = $$$1(queries.join(','));
+    const links = $$(queries.join(','));
     
     for (const link of links) {
       if (hasClass(link, CLASSES$1.DROPDOWN_ITEM)) {
         // Dropdown item
         const dropdown = closest(link, SELECTORS$1.DROPDOWN);
         if (dropdown) {
-          const toggle = $(SELECTORS$1.DROPDOWN_TOGGLE, dropdown);
+          const toggle = $1(SELECTORS$1.DROPDOWN_TOGGLE, dropdown);
           if (toggle) {
             addClass(toggle, CLASSES$1.ACTIVE);
           }
@@ -4714,7 +4480,7 @@ class Scrollspy {
           
           // Handle dropdown parents
           if (hasClass(parentItem, CLASSES$1.DROPDOWN)) {
-            const toggle = $(SELECTORS$1.DROPDOWN_TOGGLE, parentItem);
+            const toggle = $1(SELECTORS$1.DROPDOWN_TOGGLE, parentItem);
             if (toggle) {
               addClass(toggle, CLASSES$1.ACTIVE);
             }
@@ -4734,10 +4500,10 @@ class Scrollspy {
    * @private
    */
   _clear() {
-    const nav = $(this._selector);
+    const nav = $1(this._selector);
     if (!nav) return;
     
-    const activeLinks = $$$1(SELECTORS$1.ACTIVE, nav);
+    const activeLinks = $$(SELECTORS$1.ACTIVE, nav);
     for (const link of activeLinks) {
       removeClass(link, CLASSES$1.ACTIVE);
     }
@@ -4831,7 +4597,7 @@ class Scrollspy {
    * Auto-initialize scrollspy elements
    */
   static autoInit() {
-    const spyElements = $$$1(SELECTORS$1.DATA_SPY);
+    const spyElements = $$(SELECTORS$1.DATA_SPY);
     for (const element of spyElements) {
       Scrollspy.getOrCreateInstance(element);
     }
@@ -4898,7 +4664,7 @@ class Affix {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this._element = typeof element === 'string' ? $1(element) : element;
     
     if (!this._element) return;
     
@@ -5023,7 +4789,7 @@ class Affix {
     if (target === window || !target) return window;
     
     if (typeof target === 'string') {
-      return $(target) || window;
+      return $1(target) || window;
     }
     
     return target;
@@ -5300,8 +5066,10 @@ class Affix {
  * @class
  */
 class Sandal {
+  static VERSION = '1.3.0';
+  
   constructor() {
-    this.version = '1.0.0';
+    this.version = '1.3.0';
     this._components = new Map();
   }
 
@@ -5464,21 +5232,11 @@ class Sandal {
   }
 }
 
-// jQuery/presideJQuery compatibility layer
-// Preside uses presideJQuery instead of jQuery
+// jQuery/presideJQuery compatibility layer using JQNext
+// JQNext provides full jQuery 2.x compatibility and sets window.presideJQuery
 (function() {
-  // Get the jQuery reference - check for presideJQuery first (Preside), then jQuery
-  const $ = (typeof window !== 'undefined' && window.presideJQuery) ||
-            (typeof window !== 'undefined' && window.jQuery) ||
-            (typeof jQuery !== 'undefined' && jQuery);
-  
-  if (!$) {
-    // No jQuery available, skip plugin registration
-    if (typeof window !== 'undefined') {
-      window.Sandal = Sandal;
-    }
-    return;
-  }
+  // JQNext is already imported and sets window.jQuery, window.$, and window.presideJQuery
+  // We use the imported $ which is JQNext
 
   // Add transition support detection (Bootstrap 3 requirement)
   function transitionEnd() {
@@ -5532,12 +5290,17 @@ class Sandal {
   $.fn.modal = function(option, _relatedTarget) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.modal');
+      let data = Modal.getInstance(this);
       const options = $.extend({}, Modal.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
 
-      if (!data) $this.data('bs.modal', (data = new Modal(this, options)));
-      if (typeof option === 'string') data[option](_relatedTarget);
-      else if (options.show) data.show(_relatedTarget);
+      if (!data && option !== 'dispose') {
+        data = new Modal(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option](_relatedTarget);
+      } else if (data && options.show) {
+        data.show(_relatedTarget);
+      }
     });
   };
   $.fn.modal.Constructor = Modal;
@@ -5546,11 +5309,15 @@ class Sandal {
   // Dropdown plugin
   $.fn.dropdown = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.dropdown');
+      $(this);
+      let data = Dropdown.getInstance(this);
 
-      if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Dropdown(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.dropdown.Constructor = Dropdown;
@@ -5559,12 +5326,16 @@ class Sandal {
   // Tooltip plugin
   $.fn.tooltip = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.tooltip');
+      $(this);
+      let data = Tooltip.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.tooltip', (data = new Tooltip(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Tooltip(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.tooltip.Constructor = Tooltip;
@@ -5573,14 +5344,14 @@ class Sandal {
   // Popover plugin
   $.fn.popover = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.popover');
+      $(this);
+      let data = Popover.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) {
-        $this.data('bs.popover', (data = new Popover(this, options)));
+      if (!data && option !== 'dispose') {
+        data = new Popover(this, options);
       }
-      if (typeof option === 'string') {
+      if (typeof option === 'string' && data) {
         data[option]();
       }
     });
@@ -5591,11 +5362,15 @@ class Sandal {
   // Tab plugin
   $.fn.tab = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.tab');
+      $(this);
+      let data = Tab.getInstance(this);
 
-      if (!data) $this.data('bs.tab', (data = new Tab(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Tab(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.tab.Constructor = Tab;
@@ -5605,11 +5380,15 @@ class Sandal {
   $.fn.collapse = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.collapse');
+      let data = Collapse.getInstance(this);
       const options = $.extend({}, Collapse.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
 
-      if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Collapse(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.collapse.Constructor = Collapse;
@@ -5618,11 +5397,15 @@ class Sandal {
   // Alert plugin
   $.fn.alert = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.alert');
+      $(this);
+      let data = Alert.getInstance(this);
 
-      if (!data) $this.data('bs.alert', (data = new Alert(this)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Alert(this);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.alert.Constructor = Alert;
@@ -5631,13 +5414,18 @@ class Sandal {
   // Button plugin
   $.fn.button = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.button');
+      $(this);
+      let data = Button.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.button', (data = new Button(this, options)));
-      if (option === 'toggle') data.toggle();
-      else if (option) data.setState(option);
+      if (!data && option !== 'dispose') {
+        data = new Button(this, options);
+      }
+      if (option === 'toggle' && data) {
+        data.toggle();
+      } else if (option && data) {
+        data.setState(option);
+      }
     });
   };
   $.fn.button.Constructor = Button;
@@ -5647,14 +5435,20 @@ class Sandal {
   $.fn.carousel = function(option) {
     return this.each(function() {
       const $this = $(this);
-      let data = $this.data('bs.carousel');
+      let data = Carousel.getInstance(this);
       const options = $.extend({}, Carousel.DEFAULTS || {}, $this.data(), typeof option === 'object' && option);
       const action = typeof option === 'string' ? option : options.slide;
 
-      if (!data) $this.data('bs.carousel', (data = new Carousel(this, options)));
-      if (typeof option === 'number') data.to(option);
-      else if (action) data[action]();
-      else if (options.interval) data.pause().cycle();
+      if (!data && option !== 'dispose') {
+        data = new Carousel(this, options);
+      }
+      if (typeof option === 'number' && data) {
+        data.to(option);
+      } else if (action && data) {
+        data[action]();
+      } else if (data && options.interval) {
+        data.pause().cycle();
+      }
     });
   };
   $.fn.carousel.Constructor = Carousel;
@@ -5663,12 +5457,16 @@ class Sandal {
   // Scrollspy plugin
   $.fn.scrollspy = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.scrollspy');
+      $(this);
+      let data = Scrollspy.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.scrollspy', (data = new Scrollspy(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Scrollspy(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.scrollspy.Constructor = Scrollspy;
@@ -5677,12 +5475,16 @@ class Sandal {
   // Affix plugin
   $.fn.affix = function(option) {
     return this.each(function() {
-      const $this = $(this);
-      let data = $this.data('bs.affix');
+      $(this);
+      let data = Affix.getInstance(this);
       const options = typeof option === 'object' && option;
 
-      if (!data) $this.data('bs.affix', (data = new Affix(this, options)));
-      if (typeof option === 'string') data[option]();
+      if (!data && option !== 'dispose') {
+        data = new Affix(this, options);
+      }
+      if (typeof option === 'string' && data) {
+        data[option]();
+      }
     });
   };
   $.fn.affix.Constructor = Affix;
@@ -5692,14 +5494,14 @@ class Sandal {
   // DATA-API (automatic initialization via data attributes)
   // ===========================================
 
-  // Tab data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.tab.data-api', '.presidecms [data-toggle$="tab"], .presidecms [data-toggle$="pill"]', function(e) {
+  // Tab data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.tab.data-api', '[data-toggle$="tab"], [data-toggle$="pill"]', function(e) {
     e.preventDefault();
     $(this).tab('show');
   });
 
-  // Modal data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.modal.data-api', '.presidecms [data-toggle$="modal"]', function(e) {
+  // Modal data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.modal.data-api', '[data-toggle$="modal"]', function(e) {
     const $this = $(this);
     const href = $this.attr('href');
     const $target = $($this.attr('data-target') || (href && href.replace(/.*(?=#[^\s]+$)/, '')));
@@ -5710,15 +5512,15 @@ class Sandal {
     $target.modal(option, this);
   });
 
-  // Dropdown data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.dropdown.data-api', '.presidecms [data-toggle$=dropdown]', function(e) {
+  // Dropdown data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.dropdown.data-api', '[data-toggle$=dropdown]', function(e) {
     e.preventDefault();
     e.stopPropagation();
     $(this).dropdown('toggle');
   });
 
-  // Collapse data-api (Preside uses .presidecms namespace and $= ends-with selector)
-  $(document).on('click.bs.collapse.data-api', '.presidecms [data-toggle$=collapse]', function(e) {
+  // Collapse data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.collapse.data-api', '[data-toggle$=collapse]', function(e) {
     const $this = $(this);
     let href;
     const target = $this.attr('data-target')
@@ -5731,14 +5533,14 @@ class Sandal {
     $target.collapse(option);
   });
 
-  // Alert data-api (Preside uses .presidecms namespace)
-  $(document).on('click.bs.alert.data-api', '.presidecms [data-dismiss="alert"]', function(e) {
+  // Alert data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.alert.data-api', '[data-dismiss="alert"]', function(e) {
     $(this).closest('.alert').alert('close');
     e.preventDefault();
   });
 
-  // Button data-api (Preside uses .presidecms namespace)
-  $(document).on('click.bs.button.data-api', '.presidecms [data-toggle^=button]', function(e) {
+  // Button data-api - supports both Preside (.presidecms) and generic usage
+  $(document).on('click.bs.button.data-api', '[data-toggle^=button]', function(e) {
     let $btn = $(e.target);
     if (!$btn.hasClass('btn')) $btn = $btn.closest('.btn');
     $btn.button('toggle');

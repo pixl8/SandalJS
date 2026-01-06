@@ -3,13 +3,15 @@
  * Modern vanilla JS implementation with Bootstrap 3 API compatibility
  */
 
+import $ from 'jqnext';
 import {
-  $, $$, closest, parent, hasClass, addClass, removeClass, toggleClass,
-  getAttr, setAttr,
-  on, off, trigger,
   setInstance, getInstance, removeInstance,
   parseDataOptions, isDisabled
 } from '../utils/index.js';
+import {
+  $$, closest, parent, hasClass, addClass, removeClass,
+  getAttr, setAttr, on, off
+} from './helpers.js';
 
 // Constants
 const NAME = 'dropdown';
@@ -67,7 +69,8 @@ class Dropdown {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
@@ -333,18 +336,15 @@ class Dropdown {
   
   /**
    * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * @param {string} eventType
+   * @param {Object} detail
+   * @returns {Event}
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE,
-      detail
-    });
-    this._element.dispatchEvent(event);
+    // Use JQNext trigger for proper namespace handling
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
   }
   

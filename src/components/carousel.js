@@ -5,13 +5,17 @@
  */
 
 import {
-  $, $$, closest, hasClass, addClass, removeClass, toggleClass,
-  getAttr, setAttr, data as getData, children, find,
-  on, off, trigger,
-  reflow,
   setInstance, getInstance, removeInstance,
   parseDataOptions
 } from '../utils/index.js';
+
+import $J from 'jqnext';
+
+import {
+  $1 as $, $$, closest, hasClass, addClass, removeClass, toggleClass,
+  getAttr, setAttr, data as getData, children, find,
+  on, off, trigger, reflow
+} from './helpers.js';
 
 // Constants
 const NAME = 'carousel';
@@ -467,19 +471,18 @@ class Carousel {
   }
   
   /**
-   * Trigger custom event
-   * @param {string} eventType 
-   * @param {Object} detail 
-   * @returns {CustomEvent}
+   * Trigger jQuery event
+   * @param {string} eventType
+   * @param {Object} extraData
+   * @returns {Event}
    * @private
    */
-  _triggerEvent(eventType, detail = {}) {
-    const event = new CustomEvent(eventType, {
-      bubbles: true,
+  _triggerEvent(eventType, extraData = {}) {
+    const event = $J.Event(eventType, {
       cancelable: eventType === EVENTS.SLIDE,
-      detail
+      ...extraData
     });
-    this._element.dispatchEvent(event);
+    $J(this._element).trigger(event);
     return event;
   }
   

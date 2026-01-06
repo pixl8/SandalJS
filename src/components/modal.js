@@ -1,16 +1,13 @@
 /**
  * Sandal Modal Component
- * Modern vanilla JS implementation with Bootstrap 3 API compatibility
+ * Modern implementation using JQNext for DOM operations
  * Uses Web Animation API for smooth animations
  */
 
+import $ from 'jqnext';
 import {
-  $, $$, closest, hasClass, addClass, removeClass,
-  getAttr, setAttr, removeAttr, css,
-  on, off, trigger,
-  fadeIn, fadeOut, reflow,
   setInstance, getInstance, removeInstance,
-  parseDataOptions, getUID, trapFocus
+  parseDataOptions, getUID, trapFocus, reflow
 } from '../utils/index.js';
 
 // Constants
@@ -64,11 +61,14 @@ class Modal {
    * @param {Object} options - Configuration options
    */
   constructor(element, options = {}) {
-    this._element = typeof element === 'string' ? $(element) : element;
+    // Use JQNext for element selection
+    this.$element = $(element);
+    this._element = this.$element[0];
     
     if (!this._element) return;
     
-    this._dialog = $(SELECTORS.DIALOG, this._element);
+    this.$dialog = this.$element.find(SELECTORS.DIALOG);
+    this._dialog = this.$dialog[0];
     this._backdrop = null;
     this._isShown = false;
     this._isTransitioning = false;
@@ -131,24 +131,23 @@ class Modal {
     this._checkScrollbar();
     this._setScrollbar();
     
-    // Add modal-open class to body
-    addClass(document.body, CLASSES.OPEN);
+    // Add modal-open class to body using JQNext
+    $('body').addClass(CLASSES.OPEN);
     
     // Set up modal
     this._escape();
     this._resize();
     
-    // Dismiss button handler
-    on(this._element, 'click', SELECTORS.DATA_DISMISS, () => this.hide());
+    // Dismiss button handler using JQNext event delegation
+    this.$element.on('click', SELECTORS.DATA_DISMISS, () => this.hide());
     
     // Backdrop click handler
-    on(this._dialog, 'mousedown', () => {
-      on(this._element, 'mouseup', (e) => {
-        off(this._element, 'mouseup');
+    this.$dialog.on('mousedown', () => {
+      this.$element.one('mouseup', (e) => {
         if (e.target === this._element) {
           this._ignoreBackdropClick = true;
         }
-      }, { once: true });
+      });
     });
     
     // Show backdrop then modal
@@ -187,15 +186,15 @@ class Modal {
     }
     
     // Remove escape handler
-    off(document, 'keydown', this._escapeHandler);
+    $(document).off('keydown', this._escapeHandler);
     
     // Remove resize handler
-    off(window, 'resize', this._resizeHandler);
+    $(window).off('resize', this._resizeHandler);
     
-    // Hide modal then backdrop
-    removeClass(this._element, CLASSES.IN);
+    // Hide modal then backdrop using JQNext
+    this.$element.removeClass(CLASSES.IN);
     
-    if (hasClass(this._element, CLASSES.FADE)) {
+    if (this.$element.hasClass(CLASSES.FADE)) {
       await this._waitForTransition(this._element, TRANSITION_DURATION);
     }
     
@@ -218,11 +217,11 @@ class Modal {
    * Destroy the modal instance
    */
   dispose() {
-    // Remove event listeners
-    off(this._element, 'click');
-    off(this._dialog, 'mousedown');
-    off(document, 'keydown', this._escapeHandler);
-    off(window, 'resize', this._resizeHandler);
+    // Remove event listeners using JQNext
+    this.$element.off('click');
+    this.$dialog.off('mousedown');
+    $(document).off('keydown', this._escapeHandler);
+    $(window).off('resize', this._resizeHandler);
     
     // Remove focus trap
     if (this._focusTrap) {
@@ -249,7 +248,7 @@ class Modal {
    * @private
    */
   _bindEvents() {
-    on(this._element, 'click', (e) => {
+    this.$element.on('click', (e) => {
       if (e.target !== this._element) return;
       if (this._ignoreBackdropClick) {
         this._ignoreBackdropClick = false;
@@ -268,17 +267,18 @@ class Modal {
    */
   async _showBackdrop() {
     if (this._options.backdrop) {
-      this._backdrop = document.createElement('div');
-      this._backdrop.className = CLASSES.BACKDROP;
+      // Create backdrop using JQNext
+      this.$backdrop = $('<div>').addClass(CLASSES.BACKDROP);
+      this._backdrop = this.$backdrop[0];
       
-      if (hasClass(this._element, CLASSES.FADE)) {
-        addClass(this._backdrop, CLASSES.FADE);
+      if (this.$element.hasClass(CLASSES.FADE)) {
+        this.$backdrop.addClass(CLASSES.FADE);
       }
       
-      document.body.appendChild(this._backdrop);
+      this.$backdrop.appendTo('body');
       
       // Click handler for backdrop
-      on(this._backdrop, 'click', () => {
+      this.$backdrop.on('click', () => {
         if (this._options.backdrop !== 'static') {
           this.hide();
         }
@@ -286,9 +286,9 @@ class Modal {
       
       // Animate in
       reflow(this._backdrop);
-      addClass(this._backdrop, CLASSES.IN);
+      this.$backdrop.addClass(CLASSES.IN);
       
-      if (hasClass(this._backdrop, CLASSES.FADE)) {
+      if (this.$backdrop.hasClass(CLASSES.FADE)) {
         await this._waitForTransition(this._backdrop, BACKDROP_DURATION);
       }
     }
@@ -300,22 +300,25 @@ class Modal {
    * @private
    */
   async _showModal() {
-    this._element.style.display = 'block';
-    this._element.removeAttribute('aria-hidden');
-    setAttr(this._element, 'aria-modal', 'true');
-    setAttr(this._element, 'role', 'dialog');
-    this._element.scrollTop = 0;
+    // Show modal using JQNext
+    this.$element.css('display', 'block')
+      .removeAttr('aria-hidden')
+      .attr({
+        'aria-modal': 'true',
+        'role': 'dialog'
+      })
+      .scrollTop(0);
     
-    if (this._dialog) {
-      this._dialog.scrollTop = 0;
+    if (this.$dialog.length) {
+      this.$dialog.scrollTop(0);
     }
     
     this._adjustDialog();
     
     reflow(this._element);
-    addClass(this._element, CLASSES.IN);
+    this.$element.addClass(CLASSES.IN);
     
-    if (hasClass(this._element, CLASSES.FADE)) {
+    if (this.$element.hasClass(CLASSES.FADE)) {
       await this._waitForTransition(this._dialog || this._element, TRANSITION_DURATION);
     }
   }
@@ -326,24 +329,26 @@ class Modal {
    * @private
    */
   async _hideModal() {
-    this._element.style.display = 'none';
-    setAttr(this._element, 'aria-hidden', 'true');
-    removeAttr(this._element, 'aria-modal');
-    removeAttr(this._element, 'role');
+    // Hide modal using JQNext
+    this.$element.css('display', 'none')
+      .attr('aria-hidden', 'true')
+      .removeAttr('aria-modal')
+      .removeAttr('role');
     
     // Reset scrollbar
     this._resetScrollbar();
-    removeClass(document.body, CLASSES.OPEN);
+    $('body').removeClass(CLASSES.OPEN);
     
     // Remove backdrop
-    if (this._backdrop) {
-      removeClass(this._backdrop, CLASSES.IN);
+    if (this.$backdrop) {
+      this.$backdrop.removeClass(CLASSES.IN);
       
-      if (hasClass(this._backdrop, CLASSES.FADE)) {
+      if (this.$backdrop.hasClass(CLASSES.FADE)) {
         await this._waitForTransition(this._backdrop, BACKDROP_DURATION);
       }
       
-      this._backdrop.remove();
+      this.$backdrop.remove();
+      this.$backdrop = null;
       this._backdrop = null;
     }
   }
@@ -360,7 +365,7 @@ class Modal {
           this.hide();
         }
       };
-      on(document, 'keydown', this._escapeHandler);
+      $(document).on('keydown', this._escapeHandler);
     }
   }
   
@@ -374,7 +379,7 @@ class Modal {
         this._adjustDialog();
       }
     };
-    on(window, 'resize', this._resizeHandler);
+    $(window).on('resize', this._resizeHandler);
   }
   
   /**
@@ -429,14 +434,14 @@ class Modal {
       const computedPadding = parseFloat(getComputedStyle(document.body).paddingRight);
       document.body.style.paddingRight = `${computedPadding + this._scrollbarWidth}px`;
       
-      // Fixed elements
-      const fixedContent = $$(SELECTORS.FIXED_CONTENT);
-      for (const element of fixedContent) {
+      // Fixed elements using JQNext
+      $(SELECTORS.FIXED_CONTENT).each(function() {
+        const element = this;
         const actualPadding = element.style.paddingRight;
         const calculatedPadding = parseFloat(getComputedStyle(element).paddingRight);
         element.dataset.paddingRight = actualPadding;
         element.style.paddingRight = `${calculatedPadding + this._scrollbarWidth}px`;
-      }
+      });
     }
   }
   
@@ -447,14 +452,14 @@ class Modal {
   _resetScrollbar() {
     document.body.style.paddingRight = this._originalPadding || '';
     
-    const fixedContent = $$(SELECTORS.FIXED_CONTENT);
-    for (const element of fixedContent) {
+    $(SELECTORS.FIXED_CONTENT).each(function() {
+      const element = this;
       const padding = element.dataset.paddingRight;
       if (padding !== undefined) {
         element.style.paddingRight = padding;
         delete element.dataset.paddingRight;
       }
-    }
+    });
   }
   
   /**
@@ -483,30 +488,15 @@ class Modal {
    * @private
    */
   _triggerEvent(eventType, detail = {}) {
-    // Use jQuery/JQNext trigger if available - this ensures proper namespace handling
+    // Use JQNext trigger for proper namespace handling
     // and compatibility with jQuery event handlers (like those in preside.iframe.modal.js)
-    const $ = window.jQuery || window.presideJQuery;
-    
-    if ($ && $.fn && $.fn.trigger) {
-      // Use jQuery's trigger which properly handles namespaced events
-      const event = $.Event(eventType, detail);
-      $(this._element).trigger(event);
-      return event;
-    }
-    
-    // Fallback to native CustomEvent if jQuery is not available
-    // Parse event type and namespace (e.g., "hide.bs.modal" -> type: "hide", namespace: "bs.modal")
-    const parts = eventType.split('.');
-    const baseType = parts[0];
-    
-    const event = new CustomEvent(baseType, {
-      bubbles: true,
-      cancelable: eventType === EVENTS.SHOW || eventType === EVENTS.HIDE,
-      detail
-    });
-    
-    this._element.dispatchEvent(event);
+    const event = $.Event(eventType, detail);
+    this.$element.trigger(event);
     return event;
+    
+    /* Fallback no longer needed - JQNext is always available
+    // Parse event type and namespace (e.g., "hide.bs.modal" -> type: "hide", namespace: "bs.modal")
+    */
   }
   
   // Static methods
@@ -538,31 +528,33 @@ class Modal {
     const trigger = event.currentTarget || event.target.closest(SELECTORS.DATA_TOGGLE);
     if (!trigger) return;
     
-    // Get target
-    let target = getAttr(trigger, 'data-target');
+    // Get target using JQNext
+    const $trigger = $(trigger);
+    let target = $trigger.attr('data-target');
     if (!target) {
-      const href = getAttr(trigger, 'href');
+      const href = $trigger.attr('href');
       if (href) {
         target = href.replace(/.*(?=#[^\s]+$)/, ''); // Strip for IE7
       }
     }
     
-    const modalElement = $(target);
-    if (!modalElement) return;
+    const $modalElement = $(target);
+    if (!$modalElement.length) return;
     
     event.preventDefault();
     
-    // Get options from trigger
+    // Get options from trigger using JQNext
     const options = {};
-    if (trigger.hasAttribute('data-backdrop')) {
-      const backdrop = getAttr(trigger, 'data-backdrop');
+    const backdrop = $trigger.attr('data-backdrop');
+    if (backdrop !== undefined) {
       options.backdrop = backdrop === 'static' ? 'static' : backdrop !== 'false';
     }
-    if (trigger.hasAttribute('data-keyboard')) {
-      options.keyboard = getAttr(trigger, 'data-keyboard') !== 'false';
+    const keyboard = $trigger.attr('data-keyboard');
+    if (keyboard !== undefined) {
+      options.keyboard = keyboard !== 'false';
     }
     
-    const instance = Modal.getOrCreateInstance(modalElement, options);
+    const instance = Modal.getOrCreateInstance($modalElement[0], options);
     instance.toggle(trigger);
   }
   
