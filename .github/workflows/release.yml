@@ -1,0 +1,64 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version from tag
+        run: npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## SandalJS ${{ github.ref_name }}
+            
+            ### Downloads
+            - **sandal-${{ steps.get_version.outputs.VERSION }}.js** - UMD build
+            - **sandal-${{ steps.get_version.outputs.VERSION }}.min.js** - Minified
+            - **sandal-${{ steps.get_version.outputs.VERSION }}.esm.js** - ES Module
+            
+            ### CDN Usage
+            ```html
+            <script src="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/sandal-${{ steps.get_version.outputs.VERSION }}.min.js"></script>
+            ```
+          files: |
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.js
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.min.js
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.esm.js
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.js.map
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.min.js.map
+            dist/sandal-${{ steps.get_version.outputs.VERSION }}.esm.js.map
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 {
   "name": "sandaljs",
   "version": "1.1.0",
+  "type": "module",
   "description": "Modern Bootstrap 3 API-compatible JavaScript library with vanilla JS internals",
   "main": "dist/sandal.js",
   "module": "dist/sandal.esm.js",
