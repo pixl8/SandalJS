@@ -37,9 +37,7 @@
     "eslint": "^8.0.0",
     "jest": "^29.0.0"
   },
-  "dependencies": {
-    "jqnext": "file:../jqnext"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@floating-ui/dom": ">=1.0.0"
   },
