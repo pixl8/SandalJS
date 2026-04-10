@@ -9,7 +9,7 @@ import {
 
 import {
   $1 as $, $$, closest, hasClass, addClass, removeClass, toggleClass,
-  getAttr, setAttr, removeAttr, trigger
+  getAttr, setAttr, removeAttr, getData, setData, trigger
 } from './helpers.js';
 
 // Constants
@@ -116,27 +116,38 @@ class Button {
    * @param {string} [state='loading'] - State to set (loading, reset)
    */
   setState(state = 'loading') {
-    const data = this._element.dataset;
-    const val = state === 'loading' ? data.loadingText : data.resetText;
-    
-    if (!val) return;
-    
-    // Store original text
-    if (!data.resetText) {
-      data.resetText = this._element.textContent;
+    const d        = 'disabled';
+    const isInput  = this._element.nodeName.toLowerCase() === 'input';
+    const val      = isInput ? 'value' : 'innerHTML';
+
+    // Convert state name to data-attribute key: 'loading' → 'loadingText' → 'data-loading-text'
+    const dataKey  = state + 'Text';
+    const attrName = 'data-' + dataKey.replace( /([A-Z])/g, '-$1' ).toLowerCase();
+    const stateVal = this._element.getAttribute( attrName );
+
+    // Store original content before first change — matches Bootstrap 3 behaviour
+    if ( getData( this._element, 'resetText' ) == null ) {
+      setData( this._element, 'resetText', this._element[ val ] );
     }
-    
-    // Set loading state
-    this._element.textContent = val;
-    
-    // Manage disabled state
-    if (state === 'loading') {
-      setAttr(this._element, 'disabled', 'disabled');
-      addClass(this._element, CLASSES.DISABLED);
-    } else {
-      removeAttr(this._element, 'disabled');
-      removeClass(this._element, CLASSES.DISABLED);
-    }
+
+    const resetVal = getData( this._element, 'resetText' );
+    const self     = this;
+
+    // Push to event loop so forms can submit before the button is disabled
+    // Matches Bootstrap 3's setTimeout( fn, 0 ) pattern exactly
+    setTimeout( function() {
+      self._element[ val ] = stateVal !== null ? stateVal : resetVal;
+
+      if ( state === 'loading' ) {
+        self.isLoading = true;
+        addClass( self._element, d );
+        setAttr( self._element, d, d );
+      } else if ( self.isLoading ) {
+        self.isLoading = false;
+        removeClass( self._element, d );
+        removeAttr( self._element, d );
+      }
+    }, 0 );
   }
   
   /**

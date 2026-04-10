@@ -530,17 +530,27 @@ QUnit.test('Button plugin exists', function(assert) {
 
 QUnit.test('Button loading state', function(assert) {
     if (!requirePlugin('button', assert)) return;
-    
-    var $button = $('#test-button');
-    var originalText = $button.text();
-    
+
+    // setState uses setTimeout(fn, 0) — same as Bootstrap 3 — so state changes
+    // are applied on the next tick. Test must be async to observe them.
+    var done        = assert.async();
+    var $button     = $('#test-button');
+    var originalText = $button.html();
+
     $button.button('loading');
-    assert.ok($button.prop('disabled'), 'Button is disabled');
-    assert.equal($button.text(), 'Loading...', 'Button shows loading text');
-    
-    $button.button('reset');
-    assert.ok(!$button.prop('disabled'), 'Button is enabled after reset');
-    assert.equal($button.text(), originalText, 'Button text is reset');
+
+    setTimeout(function() {
+        assert.ok($button.prop('disabled'), 'Button is disabled');
+        assert.equal($button.html(), 'Loading...', 'Button shows loading text');
+
+        $button.button('reset');
+
+        setTimeout(function() {
+            assert.ok(!$button.prop('disabled'), 'Button is enabled after reset');
+            assert.equal($button.html(), originalText, 'Button text is reset');
+            done();
+        }, 0);
+    }, 0);
 });
 
 QUnit.test('Button toggle', function(assert) {
