@@ -458,6 +458,33 @@ QUnit.test('Collapse toggle method', function(assert) {
     $collapse.collapse('toggle');
 });
 
+// Bootstrap 3.0.x (the version Preside ships, and the one SandalJS targets)
+// leaves an inline "height: auto" on a shown collapsible; Bootstrap 3.3.x
+// clears the inline height instead. Stylesheets that set height: 0 on a
+// collapsible - e.g. Preside's admin mobile nav - depend on the 3.0.x
+// behaviour, so SandalJS deliberately matches that.
+QUnit.test('Collapse inline height when shown', function(assert) {
+    if (!requirePlugin('collapse', assert)) return;
+
+    var done = assert.async();
+    var $collapse = $('#test-collapse');
+    var isSandal = !!window.Sandal;
+
+    $collapse.on('shown.bs.collapse', function() {
+        var height = $collapse[0].style.height;
+
+        if (isSandal) {
+            assert.equal(height, 'auto', 'Shown collapse keeps inline height: auto');
+        } else {
+            assert.ok(height === 'auto' || height === '', 'Shown collapse inline height is "auto" (3.0.x) or cleared (3.3.x), got "' + height + '"');
+        }
+
+        done();
+    });
+
+    $collapse.collapse('show');
+});
+
 QUnit.test('Collapse data-api', function(assert) {
     if (!requirePlugin('collapse', assert)) return;
     

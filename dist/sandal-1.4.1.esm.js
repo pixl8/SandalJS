@@ -1,5 +1,5 @@
 /*!
- * SandalJS v1.4.0
+ * SandalJS v1.4.1
  * Copyright (c) 2026 Ready Intelligence
  * Released under the MIT License
  */
@@ -2990,7 +2990,11 @@ class Collapse {
     }
     
     // Finish transition
-    this._element.style.height = '';
+    // Bootstrap 3 leaves an inline "height: auto" on the shown element. Some
+    // stylesheets (e.g. Preside's mobile nav) set height: 0 on the collapsible
+    // and rely on that inline value to reveal it, so clearing the height here
+    // would make the element animate open and then immediately collapse again.
+    this._element.style.height = 'auto';
     this._element.style.overflow = '';
     removeClass(this._element, CLASSES$5.COLLAPSING);
     addClass(this._element, CLASSES$5.COLLAPSE);
@@ -5574,4 +5578,4 @@ class Sandal {
 })();
 
 export { Sandal as default };
-//# sourceMappingURL=sandal-1.4.0.esm.js.map
+//# sourceMappingURL=sandal-1.4.1.esm.js.map

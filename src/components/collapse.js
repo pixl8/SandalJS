@@ -201,7 +201,11 @@ class Collapse {
     }
     
     // Finish transition
-    this._element.style.height = '';
+    // Bootstrap 3 leaves an inline "height: auto" on the shown element. Some
+    // stylesheets (e.g. Preside's mobile nav) set height: 0 on the collapsible
+    // and rely on that inline value to reveal it, so clearing the height here
+    // would make the element animate open and then immediately collapse again.
+    this._element.style.height = 'auto';
     this._element.style.overflow = '';
     removeClass(this._element, CLASSES.COLLAPSING);
     addClass(this._element, CLASSES.COLLAPSE);
