@@ -106,10 +106,132 @@ export const fadeOut = (el, options = {}) => {
 export const reflow = (el) => el.offsetHeight;
 
 // Utilities
-export const sanitizeHTML = (html) => {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
+
+// Bootstrap 3.4.1's default allow list for the `sanitize` option: tag name ->
+// allowed attributes, with '*' applying to every tag
+const ARIA_ATTRIBUTE_PATTERN = /^aria-[\w-]*$/i;
+
+export const DEFAULT_ALLOW_LIST = {
+  '*': ['class', 'dir', 'id', 'lang', 'role', ARIA_ATTRIBUTE_PATTERN],
+  a: ['target', 'href', 'title', 'rel'],
+  area: [],
+  b: [],
+  br: [],
+  col: [],
+  code: [],
+  div: [],
+  em: [],
+  hr: [],
+  h1: [],
+  h2: [],
+  h3: [],
+  h4: [],
+  h5: [],
+  h6: [],
+  i: [],
+  img: ['src', 'alt', 'title', 'width', 'height'],
+  li: [],
+  ol: [],
+  p: [],
+  pre: [],
+  s: [],
+  small: [],
+  span: [],
+  sub: [],
+  sup: [],
+  strong: [],
+  u: [],
+  ul: []
+};
+
+const URI_ATTRIBUTES = ['background', 'cite', 'href', 'itemtype', 'longdesc', 'poster', 'src', 'xlink:href'];
+const SAFE_URL_PATTERN = /^(?:(?:https?|mailto|ftp|tel|file):|[^&:/?#]*(?:[/?#]|$))/i;
+const DATA_URL_PATTERN = /^data:(?:image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp)|video\/(?:mpeg|mp4|ogg|webm)|audio\/(?:mp3|oga|ogg|opus));base64,[a-z0-9+/]+=*$/i;
+
+const allowedAttribute = (attr, allowed) => {
+  const name = attr.nodeName.toLowerCase();
+
+  if (allowed.some(rule => rule instanceof RegExp ? rule.test(name) : rule === name)) {
+    if (URI_ATTRIBUTES.includes(name)) {
+      return SAFE_URL_PATTERN.test(attr.nodeValue) || DATA_URL_PATTERN.test(attr.nodeValue);
+    }
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Sanitize an HTML string as Bootstrap 3.4.1 does: elements not in the allow
+ * list are removed, and so are attributes not allowed for their element
+ * (and unsafe URLs)
+ * @param {string} html
+ * @param {Object} allowList - tag name -> allowed attributes (strings or RegExps)
+ * @param {Function} sanitizeFn - replaces the built-in sanitizer when given
+ * @returns {string}
+ */
+export const sanitizeHTML = (html, allowList = DEFAULT_ALLOW_LIST, sanitizeFn = null) => {
+  if (!html || !html.length) {
+    return html;
+  }
+  if (typeof sanitizeFn === 'function') {
+    return sanitizeFn(html);
+  }
+
+  const body = new DOMParser().parseFromString(html, 'text/html').body;
+  const elements = Array.from(body.querySelectorAll('*'));
+
+  elements.forEach(el => {
+    const tagName = el.nodeName.toLowerCase();
+
+    if (!Object.prototype.hasOwnProperty.call(allowList, tagName)) {
+      el.remove();
+      return;
+    }
+
+    const allowed = [...(allowList['*'] || []), ...(allowList[tagName] || [])];
+    Array.from(el.attributes).forEach(attr => {
+      if (!allowedAttribute(attr, allowed)) {
+        el.removeAttribute(attr.nodeName);
+      }
+    });
+  });
+
+  return body.innerHTML;
+};
+
+const isNodeList = (value) => value instanceof Node ||
+  ( value !== null && typeof value === 'object' && typeof value.length === 'number' );
+
+/**
+ * Put a tooltip's or popover's title or content into an element, as Bootstrap
+ * 3 does: a string is set as HTML (sanitized when `sanitize` is on) or as
+ * text, and an element or jQuery/JQNext object is inserted as it is (or as
+ * its text, without `html`)
+ * @param {Element} el
+ * @param {string|Node|Object} value
+ * @param {Object} options - the component's options (html, sanitize, allowList, sanitizeFn)
+ */
+export const setContent = (el, value, options = {}) => {
+  if (isNodeList(value)) {
+    const nodes = value instanceof Node ? [value] : Array.from(value);
+
+    if (options.html) {
+      el.innerHTML = '';
+      nodes.forEach(node => el.appendChild(node));
+    } else {
+      el.textContent = nodes.map(node => node.textContent).join('');
+    }
+    return;
+  }
+
+  const text = value === null || value === undefined ? '' : String(value);
+
+  if (options.html) {
+    el.innerHTML = options.sanitize ? sanitizeHTML(text, options.allowList, options.sanitizeFn) : text;
+  } else {
+    el.textContent = text;
+  }
 };
 
 export default {
@@ -121,5 +243,5 @@ export default {
   show, hide, remove,
   dimensions, offset,
   on, off, trigger,
-  sanitizeHTML
+  sanitizeHTML, setContent, DEFAULT_ALLOW_LIST
 };

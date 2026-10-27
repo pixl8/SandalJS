@@ -1,5 +1,5 @@
 /*!
- * SandalJS v1.4.1
+ * SandalJS v1.4.2
  * Copyright (c) 2026 Ready Intelligence
  * Released under the MIT License
  */
@@ -1107,10 +1107,132 @@ const fadeOut = (el, options = {}) => {
 const reflow = (el) => el.offsetHeight;
 
 // Utilities
-const sanitizeHTML = (html) => {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
+
+// Bootstrap 3.4.1's default allow list for the `sanitize` option: tag name ->
+// allowed attributes, with '*' applying to every tag
+const ARIA_ATTRIBUTE_PATTERN = /^aria-[\w-]*$/i;
+
+const DEFAULT_ALLOW_LIST = {
+  '*': ['class', 'dir', 'id', 'lang', 'role', ARIA_ATTRIBUTE_PATTERN],
+  a: ['target', 'href', 'title', 'rel'],
+  area: [],
+  b: [],
+  br: [],
+  col: [],
+  code: [],
+  div: [],
+  em: [],
+  hr: [],
+  h1: [],
+  h2: [],
+  h3: [],
+  h4: [],
+  h5: [],
+  h6: [],
+  i: [],
+  img: ['src', 'alt', 'title', 'width', 'height'],
+  li: [],
+  ol: [],
+  p: [],
+  pre: [],
+  s: [],
+  small: [],
+  span: [],
+  sub: [],
+  sup: [],
+  strong: [],
+  u: [],
+  ul: []
+};
+
+const URI_ATTRIBUTES = ['background', 'cite', 'href', 'itemtype', 'longdesc', 'poster', 'src', 'xlink:href'];
+const SAFE_URL_PATTERN = /^(?:(?:https?|mailto|ftp|tel|file):|[^&:/?#]*(?:[/?#]|$))/i;
+const DATA_URL_PATTERN = /^data:(?:image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp)|video\/(?:mpeg|mp4|ogg|webm)|audio\/(?:mp3|oga|ogg|opus));base64,[a-z0-9+/]+=*$/i;
+
+const allowedAttribute = (attr, allowed) => {
+  const name = attr.nodeName.toLowerCase();
+
+  if (allowed.some(rule => rule instanceof RegExp ? rule.test(name) : rule === name)) {
+    if (URI_ATTRIBUTES.includes(name)) {
+      return SAFE_URL_PATTERN.test(attr.nodeValue) || DATA_URL_PATTERN.test(attr.nodeValue);
+    }
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Sanitize an HTML string as Bootstrap 3.4.1 does: elements not in the allow
+ * list are removed, and so are attributes not allowed for their element
+ * (and unsafe URLs)
+ * @param {string} html
+ * @param {Object} allowList - tag name -> allowed attributes (strings or RegExps)
+ * @param {Function} sanitizeFn - replaces the built-in sanitizer when given
+ * @returns {string}
+ */
+const sanitizeHTML = (html, allowList = DEFAULT_ALLOW_LIST, sanitizeFn = null) => {
+  if (!html || !html.length) {
+    return html;
+  }
+  if (typeof sanitizeFn === 'function') {
+    return sanitizeFn(html);
+  }
+
+  const body = new DOMParser().parseFromString(html, 'text/html').body;
+  const elements = Array.from(body.querySelectorAll('*'));
+
+  elements.forEach(el => {
+    const tagName = el.nodeName.toLowerCase();
+
+    if (!Object.prototype.hasOwnProperty.call(allowList, tagName)) {
+      el.remove();
+      return;
+    }
+
+    const allowed = [...(allowList['*'] || []), ...(allowList[tagName] || [])];
+    Array.from(el.attributes).forEach(attr => {
+      if (!allowedAttribute(attr, allowed)) {
+        el.removeAttribute(attr.nodeName);
+      }
+    });
+  });
+
+  return body.innerHTML;
+};
+
+const isNodeList = (value) => value instanceof Node ||
+  ( value !== null && typeof value === 'object' && typeof value.length === 'number' );
+
+/**
+ * Put a tooltip's or popover's title or content into an element, as Bootstrap
+ * 3 does: a string is set as HTML (sanitized when `sanitize` is on) or as
+ * text, and an element or jQuery/JQNext object is inserted as it is (or as
+ * its text, without `html`)
+ * @param {Element} el
+ * @param {string|Node|Object} value
+ * @param {Object} options - the component's options (html, sanitize, allowList, sanitizeFn)
+ */
+const setContent = (el, value, options = {}) => {
+  if (isNodeList(value)) {
+    const nodes = value instanceof Node ? [value] : Array.from(value);
+
+    if (options.html) {
+      el.innerHTML = '';
+      nodes.forEach(node => el.appendChild(node));
+    } else {
+      el.textContent = nodes.map(node => node.textContent).join('');
+    }
+    return;
+  }
+
+  const text = value === null || value === undefined ? '' : String(value);
+
+  if (options.html) {
+    el.innerHTML = options.sanitize ? sanitizeHTML(text, options.allowList, options.sanitizeFn) : text;
+  } else {
+    el.textContent = text;
+  }
 };
 
 /**
@@ -1574,7 +1696,11 @@ const DEFAULTS$5 = {
   container: false,
   fallbackPlacement: 'flip',
   boundary: 'scrollParent',
-  sanitize: true,
+  // Bootstrap 3.0 sets html titles and content as they are. Turn sanitize on to
+  // filter them through allowList (Bootstrap 3.4.1's default), or sanitizeFn
+  sanitize: false,
+  allowList: DEFAULT_ALLOW_LIST,
+  sanitizeFn: null,
   viewport: { selector: 'body', padding: 0 }
 };
 
@@ -1910,7 +2036,7 @@ class Tooltip {
   
   /**
    * Get title content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getTitle() {
@@ -1920,27 +2046,19 @@ class Tooltip {
       title = title.call(this._element);
     }
     
-    return title ? String(title) : '';
+    return title || '';
   }
   
   /**
    * Set content in tooltip
    * @param {Element} tip 
-   * @param {string} title 
+   * @param {string|Element|Object} title 
    * @private
    */
   _setContent(tip, title) {
-    const inner = $(SELECTORS$8.TOOLTIP_INNER, tip);
+    const inner = $1(SELECTORS$8.TOOLTIP_INNER, tip);
     if (inner) {
-      if (this._options.html) {
-        if (this._options.sanitize) {
-          inner.innerHTML = sanitizeHTML(title);
-        } else {
-          inner.innerHTML = title;
-        }
-      } else {
-        inner.textContent = title;
-      }
+      setContent(inner, title, this._options);
     }
   }
   
@@ -2309,7 +2427,7 @@ class Popover extends Tooltip {
   
   /**
    * Get title content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getTitle() {
@@ -2319,12 +2437,12 @@ class Popover extends Tooltip {
       title = title.call(this._element);
     }
     
-    return title ? String(title) : '';
+    return title || '';
   }
   
   /**
    * Get content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getContent() {
@@ -2334,7 +2452,7 @@ class Popover extends Tooltip {
       content = content.call(this._element);
     }
     
-    return content ? String(content) : '';
+    return content || '';
   }
   
   /**
@@ -2349,17 +2467,9 @@ class Popover extends Tooltip {
     
     // Set title
     if (titleEl) {
-      const titleText = this._getTitle();
-      if (titleText) {
-        if (this._options.html) {
-          if (this._options.sanitize) {
-            titleEl.innerHTML = sanitizeHTML(titleText);
-          } else {
-            titleEl.innerHTML = titleText;
-          }
-        } else {
-          titleEl.textContent = titleText;
-        }
+      const titleValue = this._getTitle();
+      if (titleValue) {
+        setContent(titleEl, titleValue, this._options);
       } else {
         // Hide title if empty
         titleEl.style.display = 'none';
@@ -2368,16 +2478,7 @@ class Popover extends Tooltip {
     
     // Set content
     if (contentEl) {
-      const content = this._getContent();
-      if (this._options.html) {
-        if (this._options.sanitize) {
-          contentEl.innerHTML = sanitizeHTML(content);
-        } else {
-          contentEl.innerHTML = content;
-        }
-      } else {
-        contentEl.textContent = content;
-      }
+      setContent(contentEl, this._getContent(), this._options);
     }
   }
   
@@ -5578,4 +5679,4 @@ class Sandal {
 })();
 
 export { Sandal as default };
-//# sourceMappingURL=sandal-1.4.1.esm.js.map
+//# sourceMappingURL=sandal-1.4.2.esm.js.map

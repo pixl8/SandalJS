@@ -15,8 +15,8 @@ import {
   $$, closest, hasClass, addClass, removeClass,
   getAttr, setAttr, removeAttr, getData, css,
   show as showEl, hide as hideEl, remove as removeEl,
-  dimensions, offset, on, off, trigger, sanitizeHTML,
-  fadeIn, fadeOut, reflow
+  dimensions, offset, on, off, trigger, setContent, DEFAULT_ALLOW_LIST,
+  $1 as $1Helper, fadeIn, fadeOut, reflow
 } from './helpers.js';
 
 // Constants
@@ -37,7 +37,11 @@ const DEFAULTS = {
   container: false,
   fallbackPlacement: 'flip',
   boundary: 'scrollParent',
-  sanitize: true,
+  // Bootstrap 3.0 sets html titles and content as they are. Turn sanitize on to
+  // filter them through allowList (Bootstrap 3.4.1's default), or sanitizeFn
+  sanitize: false,
+  allowList: DEFAULT_ALLOW_LIST,
+  sanitizeFn: null,
   viewport: { selector: 'body', padding: 0 }
 };
 
@@ -373,7 +377,7 @@ class Tooltip {
   
   /**
    * Get title content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getTitle() {
@@ -383,27 +387,19 @@ class Tooltip {
       title = title.call(this._element);
     }
     
-    return title ? String(title) : '';
+    return title || '';
   }
   
   /**
    * Set content in tooltip
    * @param {Element} tip 
-   * @param {string} title 
+   * @param {string|Element|Object} title 
    * @private
    */
   _setContent(tip, title) {
-    const inner = $(SELECTORS.TOOLTIP_INNER, tip);
+    const inner = $1Helper(SELECTORS.TOOLTIP_INNER, tip);
     if (inner) {
-      if (this._options.html) {
-        if (this._options.sanitize) {
-          inner.innerHTML = sanitizeHTML(title);
-        } else {
-          inner.innerHTML = title;
-        }
-      } else {
-        inner.textContent = title;
-      }
+      setContent(inner, title, this._options);
     }
   }
   

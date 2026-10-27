@@ -13,7 +13,7 @@ import {
 
 import {
   $1 as $1Helper, hasClass, addClass, removeClass,
-  getAttr, setAttr, removeAttr, sanitizeHTML
+  getAttr, setAttr, removeAttr, setContent
 } from './helpers.js';
 
 import Tooltip from './tooltip.js';
@@ -152,7 +152,7 @@ class Popover extends Tooltip {
   
   /**
    * Get title content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getTitle() {
@@ -162,12 +162,12 @@ class Popover extends Tooltip {
       title = title.call(this._element);
     }
     
-    return title ? String(title) : '';
+    return title || '';
   }
   
   /**
    * Get content
-   * @returns {string}
+   * @returns {string|Element|Object} a string, or an element or jQuery/JQNext object
    * @private
    */
   _getContent() {
@@ -177,7 +177,7 @@ class Popover extends Tooltip {
       content = content.call(this._element);
     }
     
-    return content ? String(content) : '';
+    return content || '';
   }
   
   /**
@@ -192,17 +192,9 @@ class Popover extends Tooltip {
     
     // Set title
     if (titleEl) {
-      const titleText = this._getTitle();
-      if (titleText) {
-        if (this._options.html) {
-          if (this._options.sanitize) {
-            titleEl.innerHTML = sanitizeHTML(titleText);
-          } else {
-            titleEl.innerHTML = titleText;
-          }
-        } else {
-          titleEl.textContent = titleText;
-        }
+      const titleValue = this._getTitle();
+      if (titleValue) {
+        setContent(titleEl, titleValue, this._options);
       } else {
         // Hide title if empty
         titleEl.style.display = 'none';
@@ -211,16 +203,7 @@ class Popover extends Tooltip {
     
     // Set content
     if (contentEl) {
-      const content = this._getContent();
-      if (this._options.html) {
-        if (this._options.sanitize) {
-          contentEl.innerHTML = sanitizeHTML(content);
-        } else {
-          contentEl.innerHTML = content;
-        }
-      } else {
-        contentEl.textContent = content;
-      }
+      setContent(contentEl, this._getContent(), this._options);
     }
   }
   

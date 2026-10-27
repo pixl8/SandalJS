@@ -341,6 +341,81 @@ QUnit.test('Popover toggle method', function(assert) {
     $popover.popover('toggle');
 });
 
+// Shows a popover on a fresh button with the given options and hands the
+// rendered tip to check, then cleans up
+function withPopover(assert, options, check) {
+    var done = assert.async();
+    var $btn = $('<button type="button" class="btn btn-default">pop</button>').appendTo('body');
+
+    $btn.popover($.extend({ trigger: 'manual', placement: 'bottom' }, options));
+    $btn.on('shown.bs.popover', function() {
+        check($('.popover').last());
+        $btn.popover('hide');
+    });
+    $btn.on('hidden.bs.popover', function() {
+        $btn.popover('destroy');
+        $btn.remove();
+        done();
+    });
+    $btn.popover('show');
+}
+
+QUnit.test('Popover html option renders title and content as markup', function(assert) {
+    if (!requirePlugin('popover', assert)) return;
+
+    withPopover(assert, { html: true, title: 'T <b>bold</b>', content: '<p class="c">para</p><button class="x">btn</button>' }, function($tip) {
+        assert.equal($tip.find('.popover-title b').text(), 'bold', 'Title markup rendered');
+        assert.equal($tip.find('.popover-content p.c').text(), 'para', 'Content markup rendered');
+        assert.equal($tip.find('.popover-content button.x').length, 1, 'Content button kept');
+    });
+});
+
+QUnit.test('Popover without html sets title and content as text', function(assert) {
+    if (!requirePlugin('popover', assert)) return;
+
+    withPopover(assert, { title: 'T <b>bold</b>', content: '<p>para</p>' }, function($tip) {
+        assert.equal($tip.find('.popover-title b').length, 0, 'No title markup');
+        assert.equal($tip.find('.popover-title').text(), 'T <b>bold</b>', 'Title is the literal text');
+        assert.equal($tip.find('.popover-content').text(), '<p>para</p>', 'Content is the literal text');
+    });
+});
+
+QUnit.test('Popover title and content functions may return jQuery objects', function(assert) {
+    if (!requirePlugin('popover', assert)) return;
+
+    withPopover(assert, {
+        html: true,
+        title: function() { return $('<span class="t">').text('jq title').prepend('<i class="icon"></i>'); },
+        content: function() { return $('<div class="d">').text('jq content'); }
+    }, function($tip) {
+        assert.equal($tip.find('.popover-title span.t i.icon').length, 1, 'Title element inserted');
+        assert.equal($tip.find('.popover-title').text(), 'jq title', 'Title text intact');
+        assert.equal($tip.find('.popover-content div.d').text(), 'jq content', 'Content element inserted');
+    });
+});
+
+QUnit.test('Popover sanitize option filters html through the allow list', function(assert) {
+    if (!requirePlugin('popover', assert)) return;
+    if (!window.Sandal) {
+        assert.expect(0);
+        return; // Bootstrap 3.3.7 has no sanitize option (added in 3.4.1)
+    }
+
+    withPopover(assert, {
+        html: true,
+        sanitize: true,
+        title: 'ok',
+        content: '<p onclick="window.__pwned=1">p</p><img src="x" onerror="window.__pwned=1"><a href="javascript:void(0)">a</a><button>b</button>'
+    }, function($tip) {
+        var $content = $tip.find('.popover-content');
+        assert.equal($content.find('p').length, 1, 'Allowed element kept');
+        assert.notOk($content.find('p').attr('onclick'), 'Event handler attribute removed');
+        assert.notOk($content.find('img').attr('onerror'), 'Image event handler removed');
+        assert.notOk($content.find('a').attr('href'), 'javascript: URL removed');
+        assert.equal($content.find('button').length, 0, 'Element outside the allow list removed');
+    });
+});
+
 // ==========================================
 // TAB MODULE
 // ==========================================
